@@ -1,9 +1,21 @@
-import { LayoutDashboard, Upload, FileSearch, Route, MessageSquare, Sparkles } from "lucide-react";
+import {
+  LayoutDashboard,
+  LogOut,
+  Upload,
+  FileSearch,
+  Route,
+  MessageSquare,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
@@ -12,6 +24,9 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/AuthContext";
+import { getUserProfile } from "@/lib/data";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -25,6 +40,39 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [displayName, setDisplayName] = useState("");
+  const [displayEmail, setDisplayEmail] = useState("");
+
+  useEffect(() => {
+    const metadataName =
+      typeof user?.user_metadata?.name === "string" ? user.user_metadata.name : "";
+    setDisplayEmail(user?.email ?? "");
+    setDisplayName(metadataName);
+
+    if (!isSupabaseConfigured || !user) return;
+
+    const loadProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        setDisplayName(profile.name);
+        setDisplayEmail(profile.email);
+      } catch {
+        setDisplayName(metadataName || "User");
+        setDisplayEmail(user.email ?? "");
+      }
+    };
+
+    void loadProfile();
+  }, [user]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    queryClient.clear();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -35,7 +83,9 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-sidebar-foreground tracking-tight">AI Career Coach</span>
+              <span className="text-sm font-bold text-sidebar-foreground tracking-tight">
+                AI Career Coach
+              </span>
               <span className="text-[10px] text-muted-foreground">Plan · Practice · Grow</span>
             </div>
           )}
@@ -71,6 +121,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t border-sidebar-border p-3">
+        {!collapsed && (
+          <div className="mb-2 min-w-0 px-1">
+            <p className="truncate text-sm font-medium text-sidebar-foreground">
+              {displayName || "User"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{displayEmail}</p>
+          </div>
+        )}
+        <button
+          onClick={() => void handleSignOut()}
+          className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Sign out</span>}
+        </button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
