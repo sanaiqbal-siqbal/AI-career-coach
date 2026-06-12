@@ -1,8 +1,8 @@
-import { getDocument, GlobalWorkerOptions, version } from "pdfjs-dist";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// Use a CDN worker that matches the installed pdfjs-dist version
-GlobalWorkerOptions.workerSrc =
-  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
+// Let Vite serve the worker
+GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export async function extractTextFromPdf(file: File): Promise<string> {
   try {
@@ -10,11 +10,9 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 
     const pdf = await getDocument({
       data: new Uint8Array(buffer),
-      useWorkerFetch: false,
-      useSystemFonts: true,
     }).promise;
 
-    const pageTexts: string[] = [];
+    const pages: string[] = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
@@ -23,18 +21,17 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 
       const text = textContent.items
         .map((item) => ("str" in item ? item.str : ""))
-        .join(" ")
-        .trim();
+        .join(" ");
 
-      pageTexts.push(text);
+      pages.push(text);
     }
 
     await pdf.destroy();
 
-    return pageTexts.join("\n\n").trim();
+    return pages.join("\n\n").trim();
   } catch (error) {
     throw new Error(
-      `Could not read this PDF. Make sure it contains selectable text and is not a scanned image. Error: ${
+      `Could not read this PDF. ${
         error instanceof Error ? error.message : String(error)
       }`
     );
