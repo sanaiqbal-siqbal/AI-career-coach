@@ -5,7 +5,6 @@ import {
   FileSearch,
   Route,
   MessageSquare,
-  Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -78,8 +77,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary">
+          {/* <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </div> */}
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden">
+            <img src="/favicon.svg" alt="AI Career Coach" className="h-9 w-9" />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
