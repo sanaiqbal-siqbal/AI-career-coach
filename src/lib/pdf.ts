@@ -1,7 +1,10 @@
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 
-// CDN worker — works on all mobile browsers unlike the bundled ?url import
-GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.7.284/pdf.worker.min.mjs`;
+// Use the bundled worker as a string URL — works on both desktop and mobile
+GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url,
+).toString();
 
 export async function extractTextFromPdf(file: File): Promise<string> {
   try {
