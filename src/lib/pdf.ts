@@ -1,39 +1,52 @@
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// Use the bundled worker as a string URL — works on both desktop and mobile
-GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url,
-).toString();
+GlobalWorkerOptions.workerSrc = workerSrc;
 
 export async function extractTextFromPdf(file: File): Promise<string> {
   try {
-    const buffer = await file.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer();
 
     const pdf = await getDocument({
-      data: new Uint8Array(buffer),
-      useWorkerFetch: false,
-      useSystemFonts: true,
+      data: new Uint8Array(arrayBuffer),
     }).promise;
 
     const pages: string[] = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const text = textContent.items
-        .map((item) => ("str" in item ? item.str : ""))
-        .join(" ");
-      pages.push(text);
+
+      const content = await page.getTextContent();
+
+      let pageText = "";
+
+      for (const item of content.items as any[]) {
+        if (item && typeof item.str === "string") {
+          pageText += item.str + " ";
+        }
+      }
+
+      pages.push(pageText);
     }
 
     await pdf.destroy();
-    return pages.join("\n\n").trim();
+
+    const text = pages.join("\n").trim();
+
+    if (text.length < 50) {
+      throw new Error(
+        "No readable text found. This may be a scanned PDF."
+      );
+    }
+
+    return text;
   } catch (error) {
+    console.error("PDF extraction error:", error);
+
     throw new Error(
-      `Could not read this PDF. Make sure it is a text-based PDF, not a scanned image. ${
-        error instanceof Error ? error.message : String(error)
-      }`
+      error instanceof Error
+        ? error.message
+        : "Failed to extract text from PDF."
     );
   }
 }
