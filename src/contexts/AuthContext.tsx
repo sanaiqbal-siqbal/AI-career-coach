@@ -59,68 +59,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   
+  // useEffect(() => {
+  //   supabase.auth.getSession().then(({ data }) => {
+  //     console.log("MANUAL SESSION CHECK:", data.session);
+  //   });
+  //   if (!isSupabaseConfigured || !supabase) {
+  //     setLoading(false);
+  //     return;
+  //   }
+
+  //   let mounted = true;
+
+  //   const syncProfile = async (authUser: User) => {
+  //     try {
+  //       await ensureUserProfile(authUser);
+  //     } catch (err) {
+  //       console.error("Profile sync failed:", err);
+  //     }
+  //   };
+
+  //   const { data: { subscription } } =
+  //   supabase.auth.onAuthStateChange(async (event, session) => {
+  //     if (!mounted) return;
+    
+  //     setSession(session);
+  //     setUser(session?.user ?? null);
+  //     setLoading(false);
+    
+  //     // IMPORTANT: always wait for session existence
+  //     if (session?.user) {
+  //       try {
+  //         await ensureUserProfile(session.user);
+  //       } catch (err) {
+  //         console.error("Profile creation failed:", err);
+  //       }
+  //     }
+  //   });
+
+  //   const init = async () => {
+  //     const { data } = await supabase.auth.getSession();
+
+  //     if (!mounted) return;
+
+  //     setSession(data.session);
+  //     setUser(data.session?.user ?? null);
+
+  //     // if (data.session?.user) {
+  //     //   void syncProfile(data.session.user);
+  //     // }
+  //     if (data.session?.user) {
+  //       await ensureUserProfile(data.session.user);
+  //     }
+  //     setLoading(false);
+  //   };
+
+  //   void init();
+
+  //   return () => {
+  //     mounted = false;
+  //     subscription.unsubscribe();
+  //   };
+  // }, []);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      console.log("MANUAL SESSION CHECK:", data.session);
-    });
-    if (!isSupabaseConfigured || !supabase) {
-      setLoading(false);
-      return;
-    }
-
-    let mounted = true;
-
-    const syncProfile = async (authUser: User) => {
-      try {
-        await ensureUserProfile(authUser);
-      } catch (err) {
-        console.error("Profile sync failed:", err);
-      }
-    };
-
-    const { data: { subscription } } =
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-    
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    
-      // IMPORTANT: always wait for session existence
-      if (session?.user) {
-        try {
-          await ensureUserProfile(session.user);
-        } catch (err) {
-          console.error("Profile creation failed:", err);
-        }
-      }
-    });
-
-    const init = async () => {
-      const { data } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-
-      // if (data.session?.user) {
-      //   void syncProfile(data.session.user);
-      // }
+    if (!supabase) return;
+  
+    const handleOAuthCallback = async () => {
+      const { data, error } = await supabase.auth.getSession();
+  
+      console.log("OAuth callback session check:", data.session, error);
+  
       if (data.session?.user) {
         await ensureUserProfile(data.session.user);
       }
-      setLoading(false);
     };
-
-    void init();
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+  
+    handleOAuthCallback();
   }, []);
-
   // EMAIL LOGIN (optional fallback)
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) {
