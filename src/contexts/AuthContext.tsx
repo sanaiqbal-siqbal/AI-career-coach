@@ -76,17 +76,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const { data: { subscription } } =
-      supabase.auth.onAuthStateChange((event, nextSession) => {
-        if (!mounted) return;
-
-        setSession(nextSession);
-        setUser(nextSession?.user ?? null);
-        setLoading(false);
-
-        if (nextSession?.user) {
-          void syncProfile(nextSession.user);
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+    
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    
+      // IMPORTANT: always wait for session existence
+      if (session?.user) {
+        try {
+          await ensureUserProfile(session.user);
+        } catch (err) {
+          console.error("Profile creation failed:", err);
         }
-      });
+      }
+    });
 
     const init = async () => {
       const { data } = await supabase.auth.getSession();
@@ -96,10 +101,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setUser(data.session?.user ?? null);
 
+      // if (data.session?.user) {
+      //   void syncProfile(data.session.user);
+      // }
       if (data.session?.user) {
-        void syncProfile(data.session.user);
+        await ensureUserProfile(data.session.user);
       }
-
       setLoading(false);
     };
 
