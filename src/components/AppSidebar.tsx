@@ -36,7 +36,7 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { user, signOut } = useAuth();
@@ -73,13 +73,15 @@ export function AppSidebar() {
     navigate("/login", { replace: true });
   };
 
+  // Close mobile sidebar when a nav item is selected
+  const handleNavClick = () => {
+    setOpenMobile(false);
+  };
+
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2.5">
-          {/* <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary">
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
-          </div> */}
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg overflow-hidden">
             <img src="/favicon.svg" alt="AI Career Coach" className="h-9 w-9" />
           </div>
@@ -105,6 +107,7 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end
+                        onClick={handleNavClick}
                         className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                           active
                             ? "gradient-primary text-primary-foreground shadow-card"

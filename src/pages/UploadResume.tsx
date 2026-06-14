@@ -35,15 +35,12 @@ function AtsBar({ score }: { score: number }) {
   );
 }
 
-// Convert File to base64 string — works on all browsers including mobile Safari
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
-      // Remove the data URL prefix: "data:application/pdf;base64,"
-      const base64 = result.split(",")[1];
-      resolve(base64);
+      resolve(result.split(",")[1]);
     };
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsDataURL(file);
@@ -59,6 +56,12 @@ export default function UploadResume() {
   const [resumes, setResumes] = useState<ResumeRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingMultiple, setDeletingMultiple] = useState(false);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -83,38 +86,62 @@ export default function UploadResume() {
 
   const handleDelete = async (resumeId: string) => {
     setDeletingId(resumeId);
-    try { await deleteResume(resumeId); toast({ title: "Resume deleted" }); await loadResumes(); }
-    catch (error) {
+    try {
+      await deleteResume(resumeId);
+      toast({ title: "Resume deleted" });
+      await loadResumes();
+    } catch (error) {
       toast({ title: "Could not delete", description: error instanceof Error ? error.message : "Please try again." });
     } finally { setDeletingId(null); }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === resumes.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(resumes.map((r) => r.id)));
+    }
+  };
+
+  const handleMultiDelete = async () => {
+    setDeletingMultiple(true);
+    try {
+      await Promise.all([...selectedIds].map((id) => deleteResume(id)));
+      toast({ title: `${selectedIds.size} resume${selectedIds.size > 1 ? "s" : ""} deleted` });
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      await loadResumes();
+    } catch (error) {
+      toast({ title: "Could not delete", description: error instanceof Error ? error.message : "Please try again." });
+    } finally { setDeletingMultiple(false); }
+  };
+
+  const cancelSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
   };
 
   const handleAnalyze = async () => {
     if (!file || saving) return;
     try {
       setSaving(true);
-
-      // Convert PDF to base64 — works on every browser/device
-      // PDF text extraction happens on the server (Edge Function) not the browser
       const pdfBase64 = await fileToBase64(file);
-
-      // Upload file to Supabase Storage
       const savedResume = await uploadResumeFile(file);
-
-      // Send base64 PDF to Edge Function — server extracts text and analyzes
       await analyzeResumeAndPersist(savedResume.id, pdfBase64, targetRole);
-
       await loadResumes();
       toast({ title: "Resume analyzed ✓", description: "Your AI analysis is ready." });
       navigate("/analysis");
     } catch (error) {
-      toast({
-        title: "Analysis failed",
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setSaving(false);
-    }
+      toast({ title: "Analysis failed", description: error instanceof Error ? error.message : "Please try again." });
+    } finally { setSaving(false); }
   };
 
   return (
@@ -175,15 +202,76 @@ export default function UploadResume() {
         )}
       </button>
 
+      {/* Resume history */}
       <div className="space-y-3 border-t border-border pt-6">
+        {/* Header row */}
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-foreground">Resume history</h3>
-          {resumes.length > 0 && (
-            <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-              {resumes.length} uploaded
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {resumes.length > 0 && (
+              <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                {resumes.length} uploaded
+              </span>
+            )}
+            {resumes.length > 1 && !selectMode && (
+              <button onClick={() => setSelectMode(true)}
+                className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors">
+                Select
+              </button>
+            )}
+            {selectMode && (
+              <button onClick={cancelSelectMode}
+                className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Multi-select action bar */}
+        {selectMode && (
+          <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
+            <div className="flex items-center gap-3">
+              <input type="checkbox"
+                checked={selectedIds.size === resumes.length && resumes.length > 0}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded accent-primary cursor-pointer" />
+              <span className="text-sm text-muted-foreground">
+                {selectedIds.size === 0 ? "Select all" : `${selectedIds.size} selected`}
+              </span>
+            </div>
+            {selectedIds.size > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    disabled={deletingMultiple}
+                    className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50">
+                    {deletingMultiple
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting…</>
+                      : <><Trash2 className="h-3.5 w-3.5" /> Delete {selectedIds.size}</>
+                    }
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete {selectedIds.size} resume{selectedIds.size > 1 ? "s" : ""}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete the selected resume{selectedIds.size > 1 ? "s" : ""} and all related career paths and interviews.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => void handleMultiDelete()}>
+                      Delete {selectedIds.size > 1 ? "all" : ""}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        )}
 
         {loadingHistory ? (
           <div className="flex justify-center py-8">
@@ -198,9 +286,27 @@ export default function UploadResume() {
             {resumes.map((resume) => {
               const feedback = resume.ai_feedback as { atsScore?: number } | null;
               const atsScore = typeof feedback?.atsScore === "number" ? feedback.atsScore : null;
+              const isSelected = selectedIds.has(resume.id);
+
               return (
                 <li key={resume.id}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-elevated">
+                  onClick={() => selectMode && toggleSelect(resume.id)}
+                  className={`flex items-center gap-3 rounded-xl border p-4 shadow-card transition-all ${
+                    selectMode ? "cursor-pointer" : ""
+                  } ${
+                    isSelected
+                      ? "border-primary/40 bg-primary/5"
+                      : "border-border bg-card hover:shadow-elevated"
+                  }`}>
+
+                  {/* Checkbox in select mode */}
+                  {selectMode && (
+                    <input type="checkbox" checked={isSelected}
+                      onChange={() => toggleSelect(resume.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-4 w-4 shrink-0 rounded accent-primary cursor-pointer" />
+                  )}
+
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <FileText className="h-5 w-5 text-primary" />
                   </div>
@@ -211,27 +317,31 @@ export default function UploadResume() {
                   {atsScore !== null ? <AtsBar score={atsScore} /> : (
                     <span className="text-xs text-muted-foreground">Not analyzed</span>
                   )}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button type="button" disabled={deletingId === resume.id}
-                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50">
-                        {deletingId === resume.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      </button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this resume?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete the resume and all related career paths and interviews.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={() => void handleDelete(resume.id)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+
+                  {/* Single delete — hidden in select mode */}
+                  {!selectMode && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button type="button" disabled={deletingId === resume.id}
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors disabled:opacity-50">
+                          {deletingId === resume.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this resume?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the resume and all related career paths and interviews.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => void handleDelete(resume.id)}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </li>
               );
             })}
