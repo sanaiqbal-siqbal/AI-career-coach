@@ -1,112 +1,24 @@
+import { Navigate, Link } from "react-router-dom";
+import { Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Loader2, Mail, Sparkles } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-function EmailPendingScreen({
-  email,
-  onBack,
-  accountAlreadyExists = false,
-}: {
-  email: string;
-  onBack: () => void;
-  accountAlreadyExists?: boolean;
-}) {
-  const { resendConfirmationEmail } = useAuth();
-  const [resendMessage, setResendMessage] = useState<string | null>(null);
-  const [resendError, setResendError] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
-
-  const handleResend = async () => {
-    setResendMessage(null);
-    setResendError(null);
-    setResending(true);
-    const { error } = await resendConfirmationEmail(email);
-    setResending(false);
-    if (error) {
-      setResendError("Could not resend email. Please try again in a few minutes.");
-      return;
-    }
-    setResendMessage("Confirmation email sent! Check your inbox and spam folder.");
-  };
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-8 shadow-card animate-fade-in text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl gradient-primary shadow-glow">
-          <Mail className="h-8 w-8 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {accountAlreadyExists ? "Already registered" : "Check your inbox"}
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {accountAlreadyExists ? (
-              <>
-                <span className="font-medium text-foreground">{email}</span> already has an account.
-                Check your inbox for the confirmation link or resend it below.
-              </>
-            ) : (
-              <>
-                We sent a confirmation link to{" "}
-                <span className="font-medium text-foreground">{email}</span>.
-                Click the link to verify your account, then sign in.
-              </>
-            )}
-          </p>
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          Can't find it? Check your spam or promotions folder.
-        </p>
-
-        {resendMessage && (
-          <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-500">
-            {resendMessage}
-          </p>
-        )}
-        {resendError && (
-          <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-            {resendError}
-          </p>
-        )}
-
-        <div className="space-y-3">
-          <Link to="/login"
-            className="inline-flex w-full items-center justify-center rounded-xl gradient-primary px-4 py-3 text-sm font-semibold text-white shadow-card transition-all hover:shadow-glow">
-            Go to sign in
-          </Link>
-          <button type="button" onClick={() => void handleResend()} disabled={resending}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50">
-            {resending ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : "Resend confirmation email"}
-          </button>
-          <button type="button" onClick={onBack}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Use a different email
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function Signup() {
-  const { user, loading: authLoading, signUp } = useAuth();
-  const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const {
+    user,
+    loading: authLoading,
+    signInWithGoogle,
+  } = useAuth();
+
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const [pendingExistingAccount, setPendingExistingAccount] = useState(false);
 
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading" />
+        <Loader2
+          className="h-8 w-8 animate-spin text-primary"
+          aria-label="Loading"
+        />
       </div>
     );
   }
@@ -115,45 +27,15 @@ export default function Signup() {
     return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSignup = async () => {
     setError(null);
-    setSubmitting(true);
 
-    const trimmedEmail = email.trim();
-    const { error: signUpError, needsEmailConfirmation, accountAlreadyExists } = await signUp(
-      trimmedEmail,
-      password,
-      name.trim(),
-    );
-    setSubmitting(false);
+    const { error } = await signInWithGoogle();
 
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
+    if (error) {
+      setError(error.message);
     }
-
-    if (needsEmailConfirmation || accountAlreadyExists) {
-      setPendingEmail(trimmedEmail);
-      setPendingExistingAccount(accountAlreadyExists);
-      return;
-    }
-
-    navigate("/", { replace: true });
   };
-
-  if (pendingEmail) {
-    return (
-      <EmailPendingScreen
-        email={pendingEmail}
-        accountAlreadyExists={pendingExistingAccount}
-        onBack={() => {
-          setPendingEmail(null);
-          setPendingExistingAccount(false);
-        }}
-      />
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -162,79 +44,67 @@ export default function Signup() {
           <div className="flex h-12 w-12 items-center justify-center rounded-lg gradient-primary">
             <Sparkles className="h-6 w-6 text-primary-foreground" />
           </div>
+
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Create account</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Start your AI-powered career journey</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              Create account
+            </h1>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Start your AI-powered career journey
+            </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              autoComplete="name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Alex Johnson"
-              className="border-border bg-background"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="border-border bg-background"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="border-border bg-background"
-            />
-          </div>
-
-          {error && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="flex w-full items-center justify-center gap-2 rounded-lg gradient-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-card transition-all hover:shadow-elevated disabled:cursor-not-allowed disabled:opacity-50"
+        <button
+          type="button"
+          onClick={handleGoogleSignup}
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm font-medium transition-colors hover:bg-muted"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 48 48"
+            className="h-5 w-5"
           >
-            {submitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Creating account...
-              </>
-            ) : (
-              "Sign up"
-            )}
-          </button>
-        </form>
+            <path
+              fill="#FFC107"
+              d="M43.6 20.5H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"
+            />
+            <path
+              fill="#FF3D00"
+              d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.4 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"
+            />
+            <path
+              fill="#4CAF50"
+              d="M24 44c5.3 0 10.1-2 13.7-5.2l-6.3-5.3C29.4 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.3-8H6.2C9.4 39.5 15.9 44 24 44z"
+            />
+            <path
+              fill="#1976D2"
+              d="M43.6 20.5H42V20H24v8h11.3c-.8 2.4-2.3 4.3-3.9 5.5l6.3 5.3C37.2 38.4 44 33 44 24c0-1.3-.1-2.3-.4-3.5z"
+            />
+          </svg>
+
+          Continue with Google
+        </button>
+
+        {error && (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Create your account instantly using your Google account.
+          </p>
+        </div>
 
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-primary hover:underline">
+          <Link
+            to="/login"
+            className="font-medium text-primary hover:underline"
+          >
             Sign in
           </Link>
         </p>

@@ -27,6 +27,7 @@ type AuthContextValue = {
   signUp: (email: string, password: string, name: string) => Promise<SignUpResult>;
   resendConfirmationEmail: (email: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ error: AuthError | null }>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -186,7 +187,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return { error: null };
   }, []);
-
+  const signInWithGoogle = useCallback(async () => {
+    if (!supabase) {
+      return { error: { message: "Supabase is not configured." } };
+    }
+  
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: getAuthRedirectUrl("/"),
+      },
+    });
+  
+    return {
+      error: error ? toAuthError(error) : null,
+    };
+  }, []);
   const signUp = useCallback(async (email: string, password: string, name: string) => {
     if (!supabase) {
       return {
@@ -270,11 +286,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  // const value = useMemo(
+  //   () => ({ user, session, loading, signIn, signUp, resendConfirmationEmail, signOut }),
+  //   [user, session, loading, signIn, signUp, resendConfirmationEmail, signOut],
+  // );
   const value = useMemo(
-    () => ({ user, session, loading, signIn, signUp, resendConfirmationEmail, signOut }),
-    [user, session, loading, signIn, signUp, resendConfirmationEmail, signOut],
+    () => ({
+      user,
+      session,
+      loading,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      resendConfirmationEmail,
+      signOut,
+    }),
+    [
+      user,
+      session,
+      loading,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      resendConfirmationEmail,
+      signOut,
+    ],
   );
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
