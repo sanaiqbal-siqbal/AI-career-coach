@@ -468,7 +468,7 @@ export async function getInterviewCount() {
 
 export async function analyzeResumeAndPersist(
   resumeId: string,
-  resumeText: string,
+  pdfBase64: string,   // ← was: resumeText: string
   targetRole: string,
 ) {
   const db = ensureClient();
@@ -478,7 +478,7 @@ export async function analyzeResumeAndPersist(
     body: {
       action: "analyze_resume",
       payload: {
-        resumeText,
+        pdfBase64,     // ← was: resumeText
         targetRole,
       },
     },

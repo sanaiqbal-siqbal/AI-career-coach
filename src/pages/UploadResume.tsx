@@ -8,11 +8,19 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { analyzeResumeAndPersist, deleteResume, getResumesForUser, uploadResumeFile, type ResumeRecord } from "@/lib/data";
-import { extractTextFromPdf } from "@/lib/pdf";
+import {
+  analyzeResumeAndPersist,
+  deleteResume,
+  getResumesForUser,
+  uploadResumeFile,
+  type ResumeRecord,
+} from "@/lib/data";
 
 function formatResumeDate(iso: string) {
-  return new Date(iso).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString([], {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
 
 function AtsBar({ score }: { score: number }) {
@@ -25,6 +33,21 @@ function AtsBar({ score }: { score: number }) {
       <span className="text-xs font-semibold text-foreground">{score}</span>
     </div>
   );
+}
+
+// Convert File to base64 string — works on all browsers including mobile Safari
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the data URL prefix: "data:application/pdf;base64,"
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function UploadResume() {
@@ -42,8 +65,9 @@ export default function UploadResume() {
   const loadResumes = useCallback(async () => {
     setLoadingHistory(true);
     try { setResumes(await getResumesForUser()); }
-    catch (error) { toast({ title: "Could not load history", description: error instanceof Error ? error.message : "Please try again." }); }
-    finally { setLoadingHistory(false); }
+    catch (error) {
+      toast({ title: "Could not load history", description: error instanceof Error ? error.message : "Please try again." });
+    } finally { setLoadingHistory(false); }
   }, [toast]);
 
   useEffect(() => {
@@ -60,23 +84,34 @@ export default function UploadResume() {
   const handleDelete = async (resumeId: string) => {
     setDeletingId(resumeId);
     try { await deleteResume(resumeId); toast({ title: "Resume deleted" }); await loadResumes(); }
-    catch (error) { toast({ title: "Could not delete", description: error instanceof Error ? error.message : "Please try again." }); }
-    finally { setDeletingId(null); }
+    catch (error) {
+      toast({ title: "Could not delete", description: error instanceof Error ? error.message : "Please try again." });
+    } finally { setDeletingId(null); }
   };
 
   const handleAnalyze = async () => {
     if (!file || saving) return;
     try {
       setSaving(true);
-      const resumeText = await extractTextFromPdf(file);
-      if (!resumeText) throw new Error("Could not extract text from this PDF.");
+
+      // Convert PDF to base64 — works on every browser/device
+      // PDF text extraction happens on the server (Edge Function) not the browser
+      const pdfBase64 = await fileToBase64(file);
+
+      // Upload file to Supabase Storage
       const savedResume = await uploadResumeFile(file);
-      await analyzeResumeAndPersist(savedResume.id, resumeText, targetRole);
+
+      // Send base64 PDF to Edge Function — server extracts text and analyzes
+      await analyzeResumeAndPersist(savedResume.id, pdfBase64, targetRole);
+
       await loadResumes();
       toast({ title: "Resume analyzed ✓", description: "Your AI analysis is ready." });
       navigate("/analysis");
     } catch (error) {
-      toast({ title: "Analysis failed", description: error instanceof Error ? error.message : "Please check your setup." });
+      toast({
+        title: "Analysis failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
     } finally {
       setSaving(false);
     }
@@ -84,13 +119,11 @@ export default function UploadResume() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8 animate-fade-in">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-foreground">Upload Your Resume</h2>
         <p className="mt-1 text-muted-foreground">Upload a PDF and our AI will score, analyze, and coach you in seconds.</p>
       </div>
 
-      {/* Target role input */}
       <div className="space-y-1.5">
         <label htmlFor="target-role" className="text-sm font-medium text-foreground">Target role</label>
         <input id="target-role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}
@@ -98,13 +131,10 @@ export default function UploadResume() {
           className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-card focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
       </div>
 
-      {/* Drop zone */}
       <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)} onDrop={handleDrop}
         className={`relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-12 text-center transition-all duration-200 ${
-          dragging
-            ? "border-primary bg-primary/5 shadow-glow"
-            : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.02]"
+          dragging ? "border-primary bg-primary/5 shadow-glow" : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.02]"
         }`}>
         <div className={`flex h-16 w-16 items-center justify-center rounded-2xl transition-all duration-200 ${
           dragging ? "gradient-primary shadow-glow" : "bg-primary/10"
@@ -115,11 +145,11 @@ export default function UploadResume() {
           <p className="font-semibold text-foreground">Drag & drop your resume here</p>
           <p className="mt-1 text-sm text-muted-foreground">or click to browse — PDF only, max 5MB</p>
         </div>
-        <input type="file" accept=".pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f); }}
+        <input type="file" accept=".pdf"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) setFile(f); }}
           className="absolute inset-0 cursor-pointer opacity-0" />
       </div>
 
-      {/* Selected file */}
       {file && (
         <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg gradient-primary">
@@ -136,7 +166,6 @@ export default function UploadResume() {
         </div>
       )}
 
-      {/* Analyze button */}
       <button disabled={!file || saving || !targetRole.trim()} onClick={() => void handleAnalyze()}
         className="flex w-full items-center justify-center gap-2 rounded-xl gradient-primary px-4 py-3.5 text-sm font-semibold text-white shadow-card transition-all hover:shadow-glow disabled:cursor-not-allowed disabled:opacity-40">
         {saving ? (
@@ -146,7 +175,6 @@ export default function UploadResume() {
         )}
       </button>
 
-      {/* Resume history */}
       <div className="space-y-3 border-t border-border pt-6">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold text-foreground">Resume history</h3>
@@ -180,9 +208,7 @@ export default function UploadResume() {
                     <p className="truncate text-sm font-medium text-foreground">{resume.file_name}</p>
                     <p className="text-xs text-muted-foreground">{formatResumeDate(resume.uploaded_at)}</p>
                   </div>
-                  {atsScore !== null ? (
-                    <AtsBar score={atsScore} />
-                  ) : (
+                  {atsScore !== null ? <AtsBar score={atsScore} /> : (
                     <span className="text-xs text-muted-foreground">Not analyzed</span>
                   )}
                   <AlertDialog>
