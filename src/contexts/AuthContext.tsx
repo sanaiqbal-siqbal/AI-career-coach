@@ -121,19 +121,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   //   };
   // }, []);
   useEffect(() => {
-    if (!supabase) return;
+    if (!isSupabaseConfigured || !supabase) {
+      setLoading(false);
+      return;
+    }
   
-    const handleOAuthCallback = async () => {
-      const { data, error } = await supabase.auth.getSession();
+    let mounted = true;
   
-      console.log("OAuth callback session check:", data.session, error);
-  
-      if (data.session?.user) {
-        await ensureUserProfile(data.session.user);
+    const syncProfile = async (user: User) => {
+      try {
+        await ensureUserProfile(user);
+      } catch (err) {
+        console.error("Profile sync failed:", err);
       }
     };
   
-    handleOAuthCallback();
+    // 1. FIRST: listen to auth changes
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (!mounted) return;
+  
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+  
+        if (session?.user) {
+          await syncProfile(session.user);
+        }
+      });
+  
+    // 2. SECOND: restore session ONCE
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+  
+      if (!mounted) return;
+  
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
+  
+      if (data.session?.user) {
+        await syncProfile(data.session.user);
+      }
+  
+      setLoading(false);
+    };
+  
+    init();
+  
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
   // EMAIL LOGIN (optional fallback)
   const signIn = useCallback(async (email: string, password: string) => {
