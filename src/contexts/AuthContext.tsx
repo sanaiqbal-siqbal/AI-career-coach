@@ -56,7 +56,7 @@ async function ensureUserProfile(user: User) {
   // Log so we can see if RLS is blocking
   if (error) console.error("Profile insert failed:", error.message);
 }
-//test
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
