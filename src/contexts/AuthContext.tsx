@@ -47,11 +47,14 @@ async function ensureUserProfile(user: User) {
 
   if (existing?.id) return;
 
-  await supabase.from("users").insert({
+  const { error } = await supabase.from("users").insert({
     id: user.id,
-    name: user.user_metadata?.name || "",
+    name: user.user_metadata?.full_name || user.user_metadata?.name || "",
     email: user.email || "",
   });
+
+  // Log so we can see if RLS is blocking
+  if (error) console.error("Profile insert failed:", error.message);
 }
 //test
 export function AuthProvider({ children }: { children: ReactNode }) {
