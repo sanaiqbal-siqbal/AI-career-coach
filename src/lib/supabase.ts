@@ -11,11 +11,10 @@ export const supabase = isSupabaseConfigured
         detectSessionInUrl: true,
         persistSession: true,
         autoRefreshToken: true,
-        flowType: "pkce",
       },
     })
   : null;
-
+//test
 export function getAuthRedirectUrl(path = "/login") {
   if (typeof window === "undefined") return path;
   return `${window.location.origin}${path}`;
