@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
@@ -18,11 +18,12 @@ export function AppLayout() {
           <AppHeader />
           <main className="flex-1 p-6">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/upload" element={<UploadResume />} />
-              <Route path="/analysis" element={<ResumeAnalysis />} />
-              <Route path="/careers" element={<CareerPaths />} />
-              <Route path="/interview" element={<MockInterview />} />
+              <Route path="" element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="upload" element={<UploadResume />} />
+              <Route path="analysis" element={<ResumeAnalysis />} />
+              <Route path="careers" element={<CareerPaths />} />
+              <Route path="interview" element={<MockInterview />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

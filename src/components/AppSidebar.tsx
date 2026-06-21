@@ -28,11 +28,11 @@ import { getUserProfile } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Upload Resume", url: "/upload", icon: Upload },
-  { title: "Resume Analysis", url: "/analysis", icon: FileSearch },
-  { title: "Career Paths", url: "/careers", icon: Route },
-  { title: "Mock Interview", url: "/interview", icon: MessageSquare },
+  { title: "Dashboard", url: "/app/dashboard", icon: LayoutDashboard },
+  { title: "Upload Resume", url: "/app/upload", icon: Upload },
+  { title: "Resume Analysis", url: "/app/analysis", icon: FileSearch },
+  { title: "Career Paths", url: "/app/careers", icon: Route },
+  { title: "Mock Interview", url: "/app/interview", icon: MessageSquare },
 ];
 
 export function AppSidebar() {

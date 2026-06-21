@@ -44,7 +44,7 @@ export default function Login() {
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,7 +61,7 @@ export default function Login() {
       return;
     }
 
-    navigate("/", { replace: true });
+    navigate("/app", { replace: true });
   };
 
   return (

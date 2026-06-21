@@ -24,7 +24,7 @@ export default function Signup() {
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   const handleGoogleSignup = async () => {
