@@ -220,8 +220,15 @@ export default function MockInterview() {
                   : "border-transparent hover:bg-muted/40"
               }`}>
               <button type="button" onClick={() => selectInterview(item)} className="min-w-0 flex-1 text-left">
-                <p className="text-[11px] font-semibold text-foreground">{formatInterviewDate(item.created_at)}</p>
-                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{previewMessage(item.conversation)}</p>
+                <p className="truncate text-[11px] font-semibold text-foreground">
+                  {item.target_role || "Mock Interview"}
+                </p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  {formatInterviewDate(item.created_at)}
+                </p>
+                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                  {previewMessage(item.conversation)}
+                </p>
               </button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>

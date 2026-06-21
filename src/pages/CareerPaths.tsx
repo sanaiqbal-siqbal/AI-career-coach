@@ -113,13 +113,17 @@ export default function CareerPaths() {
                 <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{p.description}</p>
 
                 {/* Skill gaps */}
-                {p.skills.length > 0 && (
+                {Array.isArray(p.skills) && p.skills.length > 0 && (
                   <div className="mt-4">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Skill gaps</p>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Skill gaps
+                    </p>
                     <div className="flex flex-wrap gap-1.5">
                       {p.skills.map((s) => (
-                        <span key={s}
-                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${style.tag} border-current/20`}>
+                        <span
+                          key={s}
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${style.tag} border-current/20`}
+                        >
                           {s}
                         </span>
                       ))}

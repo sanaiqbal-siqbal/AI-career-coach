@@ -52,7 +52,7 @@ export default function UploadResume() {
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [targetRole, setTargetRole] = useState("Frontend Engineer");
+  const [targetRole, setTargetRole] = useState("");
   const [resumes, setResumes] = useState<ResumeRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -134,11 +134,11 @@ export default function UploadResume() {
     try {
       setSaving(true);
       const pdfBase64 = await fileToBase64(file);
-      const savedResume = await uploadResumeFile(file);
+      const savedResume = await uploadResumeFile(file, targetRole);
       await analyzeResumeAndPersist(savedResume.id, pdfBase64, targetRole);
       await loadResumes();
       toast({ title: "Resume analyzed ✓", description: "Your AI analysis is ready." });
-      navigate("/analysis");
+      navigate("/app/analysis");
     } catch (error) {
       toast({ title: "Analysis failed", description: error instanceof Error ? error.message : "Please try again." });
     } finally { setSaving(false); }
@@ -151,13 +151,25 @@ export default function UploadResume() {
         <p className="mt-1 text-muted-foreground">Upload a PDF and our AI will score, analyze, and coach you in seconds.</p>
       </div>
 
-      <div className="space-y-1.5">
+      {/* <div className="space-y-1.5">
         <label htmlFor="target-role" className="text-sm font-medium text-foreground">Target role</label>
         <input id="target-role" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}
           placeholder="e.g. Senior Frontend Engineer"
           className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-card focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all" />
+      </div> */}
+      <div className="space-y-1.5">
+        <label htmlFor="target-role" className="text-sm font-medium text-foreground">
+          Target role <span className="text-destructive">*</span>
+        </label>
+        <input
+          id="target-role"
+          value={targetRole}
+          onChange={(e) => setTargetRole(e.target.value)}
+          placeholder="e.g. Senior Frontend Engineer"
+          required
+          className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground shadow-card focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+        />
       </div>
-
       <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)} onDrop={handleDrop}
         className={`relative flex flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-12 text-center transition-all duration-200 ${

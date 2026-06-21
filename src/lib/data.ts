@@ -33,6 +33,7 @@ type AnalyzeResumeResult = {
 export type InterviewRecord = {
   id: string;
   created_at: string;
+  target_role: string | null,
   conversation: InterviewMessage[];
 };
 
@@ -40,6 +41,7 @@ export type ResumeRecord = {
   id: string;
   file_name: string;
   uploaded_at: string;
+  target_role: string | null;
   ai_feedback: ResumeFeedback | null;
 };
 
@@ -191,7 +193,7 @@ export async function createResumeRecord(fileName: string) {
   return data;
 }
 
-export async function uploadResumeFile(file: File) {
+export async function uploadResumeFile(file: File, targetRole: string | null = null) {
   const db = ensureClient();
   const userId = await getAuthenticatedUserId();
   const storagePath = `${userId}/${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
@@ -224,15 +226,16 @@ export async function uploadResumeFile(file: File) {
   }
 
   const { data, error } = await db
-    .from("resumes")
-    .insert({
-      user_id: userId,
-      file_name: file.name,
-      file_path: filePath,
-      ai_feedback: null,
-    })
-    .select("id, file_name, uploaded_at")
-    .single();
+  .from("resumes")
+  .insert({
+    user_id: userId,
+    file_name: file.name,
+    file_path: filePath,
+    target_role: targetRole,
+    ai_feedback: null,
+  })
+  .select("id, file_name, uploaded_at, ai_feedback, target_role")
+  .single();
 
   if (error) throw formatDbError(error, "Saving resume");
   return {
@@ -409,16 +412,17 @@ export async function getInterviewsForUser(): Promise<InterviewRecord[]> {
   const userId = await getAuthenticatedUserId();
 
   const { data, error } = await db
-    .from("interviews")
-    .select("id, created_at, conversation")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  .from("interviews")
+  .select("id, created_at, conversation, resume:resumes(id, target_role)")
+  .eq("user_id", userId)
+  .order("created_at", { ascending: false });
 
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
+  return (data ?? []).map((row: any) => ({
     id: row.id,
     created_at: row.created_at,
+    target_role: row.resume?.target_role ?? null,
     conversation: (row.conversation as InterviewMessage[]) ?? [],
   }));
 }
