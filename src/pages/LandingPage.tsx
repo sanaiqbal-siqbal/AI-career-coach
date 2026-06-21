@@ -854,9 +854,8 @@ export default function LandingPage() {
             </div>
             <p className="text-sm text-muted-foreground mb-4">Plan · Practice · Grow</p>
             <div className="flex gap-3 text-muted-foreground">
-              <a href="#" aria-label="Twitter" className="hover:text-foreground transition-colors"><Twitter className="h-4 w-4" /></a>
-              <a href="#" aria-label="LinkedIn" className="hover:text-foreground transition-colors"><Linkedin className="h-4 w-4" /></a>
-              <a href="https://github.com/sanaiqbal-siqbal/AI-career-coach" aria-label="GitHub" className="hover:text-foreground transition-colors"><Github className="h-4 w-4" /></a>
+              <a href="https://www.linkedin.com/in/sana-iqbal05" aria-label="LinkedIn" className="hover:text-foreground transition-colors"><Linkedin className="h-4 w-4" /></a>
+              <a href="https://github.com/sanaiqbal-siqbal" aria-label="GitHub" className="hover:text-foreground transition-colors"><Github className="h-4 w-4" /></a>
             </div>
           </div>
           {[
