@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import LandingPage from "./pages/LandingPage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/" element={<LandingPage />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
