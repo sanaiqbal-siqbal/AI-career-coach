@@ -62,67 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // useEffect(() => {
-  //   supabase.auth.getSession().then(({ data }) => {
-  //     console.log("MANUAL SESSION CHECK:", data.session);
-  //   });
-  //   if (!isSupabaseConfigured || !supabase) {
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   let mounted = true;
-
-  //   const syncProfile = async (authUser: User) => {
-  //     try {
-  //       await ensureUserProfile(authUser);
-  //     } catch (err) {
-  //       console.error("Profile sync failed:", err);
-  //     }
-  //   };
-
-  //   const { data: { subscription } } =
-  //   supabase.auth.onAuthStateChange(async (event, session) => {
-  //     if (!mounted) return;
-    
-  //     setSession(session);
-  //     setUser(session?.user ?? null);
-  //     setLoading(false);
-    
-  //     // IMPORTANT: always wait for session existence
-  //     if (session?.user) {
-  //       try {
-  //         await ensureUserProfile(session.user);
-  //       } catch (err) {
-  //         console.error("Profile creation failed:", err);
-  //       }
-  //     }
-  //   });
-
-  //   const init = async () => {
-  //     const { data } = await supabase.auth.getSession();
-
-  //     if (!mounted) return;
-
-  //     setSession(data.session);
-  //     setUser(data.session?.user ?? null);
-
-  //     // if (data.session?.user) {
-  //     //   void syncProfile(data.session.user);
-  //     // }
-  //     if (data.session?.user) {
-  //       await ensureUserProfile(data.session.user);
-  //     }
-  //     setLoading(false);
-  //   };
-
-  //   void init();
-
-  //   return () => {
-  //     mounted = false;
-  //     subscription.unsubscribe();
-  //   };
-  // }, []);
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
       setLoading(false);
@@ -131,45 +70,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
     let mounted = true;
   
-    const syncProfile = async (user: User) => {
-      try {
-        await ensureUserProfile(user);
-      } catch (err) {
-        console.error("Profile sync failed:", err);
-      }
-    };
-  
-    // 1. FIRST: listen to auth changes
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (!mounted) return;
-  
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-  
-        if (session?.user) {
-          await syncProfile(session.user);
-        }
-      });
-  
-    // 2. SECOND: restore session ONCE
-    const init = async () => {
-      const { data } = await supabase.auth.getSession();
-  
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
   
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+  
+      if (session?.user) {
+        setTimeout(() => {
+          void ensureUserProfile(session.user).catch((err) => {
+            console.error("Profile sync failed:", err);
+          });
+        }, 0);
+      }
+    });
+  
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
       setSession(data.session);
       setUser(data.session?.user ?? null);
+      setLoading(false);
   
       if (data.session?.user) {
-        await syncProfile(data.session.user);
+        setTimeout(() => {
+          void ensureUserProfile(data.session!.user).catch((err) => {
+            console.error("Profile sync failed:", err);
+          });
+        }, 0);
       }
-  
-      setLoading(false);
-    };
-  
-    init();
+    });
   
     return () => {
       mounted = false;
@@ -214,12 +144,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
-
-    await supabase.auth.signOut();
-
-    setUser(null);
-    setSession(null);
-  }, []);
+  
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) throw error;
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
+  }, [supabase]);
 
   const value = useMemo(
     () => ({

@@ -43,7 +43,7 @@ export function AppHeader() {
     setSigningOut(true);
     await signOut();
     queryClient.clear();
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
     setSigningOut(false);
   };
 

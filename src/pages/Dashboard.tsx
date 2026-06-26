@@ -50,10 +50,22 @@ const tools = [
   },
 ];
 
+function StatSkeleton() {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+      <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+      <div className="mt-3 h-7 w-12 animate-pulse rounded bg-muted" />
+      <div className="mt-2 h-3 w-20 animate-pulse rounded bg-muted" />
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, user } = useAuth();
   const { toast } = useToast();
+
+  const [pageLoading, setPageLoading] = useState(true);
   const [userName, setUserName] = useState("there");
   const [stats, setStats] = useState([
     { label: "ATS Score", value: "--", sub: "No data yet", color: "text-primary" },
@@ -64,6 +76,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (authLoading) return;
+    if (!user) {
+      setPageLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
     const loadDashboard = async () => {
       try {
         const [userProfile, latestResume, resumeCount, interviewCount, careerPathCount] =
@@ -74,8 +93,12 @@ export default function Dashboard() {
             getInterviewCount(),
             getCareerPathCount(),
           ]);
+
+        if (cancelled) return;
+
         const feedback = latestResume?.ai_feedback as { atsScore?: number } | null;
         const atsScore = typeof feedback?.atsScore === "number" ? `${feedback.atsScore}` : "--";
+
         setUserName(userProfile?.name?.split(" ")[0] || "there");
         setStats([
           { label: "ATS Score", value: atsScore, sub: atsScore === "--" ? "Upload resume" : "/ 100", color: "text-primary" },
@@ -84,21 +107,33 @@ export default function Dashboard() {
           { label: "Career Paths", value: String(careerPathCount), sub: "Generated", color: "text-amber-500" },
         ]);
       } catch (error) {
-        toast({ title: "Could not load dashboard", description: error instanceof Error ? error.message : "Please try again." });
+        if (!cancelled) {
+          toast({
+            title: "Could not load dashboard",
+            description: error instanceof Error ? error.message : "Please try again.",
+          });
+        }
+      } finally {
+        if (!cancelled) setPageLoading(false);
       }
     };
+
     void loadDashboard();
-  }, [authLoading, toast]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user, toast]);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="space-y-8 animate-fade-in">
-
-      {/* Hero header */}
-      <div className="relative overflow-hidden rounded-2xl p-6 sm:p-8"
-        style={{ background: "linear-gradient(135deg, hsl(245 70% 58% / 0.12), hsl(280 70% 50% / 0.08))" }}>
+    <div className="space-y-8">
+      <div
+        className="relative overflow-hidden rounded-2xl p-6 sm:p-8"
+        style={{ background: "linear-gradient(135deg, hsl(245 70% 58% / 0.12), hsl(280 70% 50% / 0.08))" }}
+      >
         <div className="absolute inset-0 rounded-2xl border border-primary/10" />
         <div className="relative">
           <div className="mb-1 flex items-center gap-2">
@@ -112,34 +147,40 @@ export default function Dashboard() {
             Your AI-powered career toolkit. Everything you need to land your next role.
           </p>
         </div>
-        {/* Decorative orb */}
-        <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full opacity-10"
-          style={{ background: "radial-gradient(circle, hsl(245 70% 62%), transparent 70%)" }} />
+        <div
+          className="absolute -right-12 -top-12 h-48 w-48 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, hsl(245 70% 62%), transparent 70%)" }}
+        />
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 stagger">
-        {stats.map((stat) => (
-          <div key={stat.label}
-            className="animate-fade-in rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-elevated">
-            <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
-            <p className={`mt-1.5 text-2xl font-bold tabular-nums ${stat.color}`}>{stat.value}</p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">{stat.sub}</p>
-          </div>
-        ))}
+        {pageLoading
+          ? Array.from({ length: 4 }).map((_, i) => <StatSkeleton key={i} />)
+          : stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-xl border border-border bg-card p-4 shadow-card transition-all hover:shadow-elevated"
+              >
+                <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
+                <p className={`mt-1.5 text-2xl font-bold tabular-nums ${stat.color}`}>{stat.value}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{stat.sub}</p>
+              </div>
+            ))}
       </div>
 
-      {/* Tools */}
       <div>
         <div className="mb-4 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Tools</h2>
         </div>
+
         <div className="grid gap-4 sm:grid-cols-2 stagger">
           {tools.map((tool) => (
-            <button key={tool.title} onClick={() => navigate(tool.path)}
-              className={`group animate-fade-in relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-left shadow-card transition-all duration-200 hover:-translate-y-1 ${tool.glow}`}>
-              {/* Top row */}
+            <button
+              key={tool.title}
+              onClick={() => navigate(tool.path)}
+              className={`group relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-left shadow-card transition-all duration-200 hover:-translate-y-1 ${tool.glow}`}
+            >
               <div className="flex items-start justify-between">
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${tool.gradient} shadow-sm`}>
                   <tool.icon className="h-5 w-5 text-white" />
@@ -148,16 +189,16 @@ export default function Dashboard() {
                   {tool.tag}
                 </span>
               </div>
-              {/* Content */}
+
               <div className="mt-4">
                 <h3 className="text-base font-semibold text-card-foreground">{tool.title}</h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{tool.description}</p>
               </div>
-              {/* CTA */}
+
               <div className="mt-4 flex items-center gap-1 text-sm font-medium text-primary transition-transform group-hover:translate-x-1">
                 Open <ArrowRight className="h-3.5 w-3.5" />
               </div>
-              {/* Subtle gradient overlay on hover */}
+
               <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${tool.gradient} opacity-0 transition-opacity duration-200 group-hover:opacity-[0.03]`} />
             </button>
           ))}

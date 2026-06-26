@@ -70,7 +70,7 @@ export function AppSidebar() {
   const handleSignOut = async () => {
     await signOut();
     queryClient.clear();
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   };
 
   // Close mobile sidebar when a nav item is selected

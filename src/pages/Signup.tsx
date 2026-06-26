@@ -42,7 +42,8 @@ export default function Signup() {
       <div className="w-full max-w-md space-y-6 rounded-xl border border-border bg-card p-8 shadow-card animate-fade-in">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg gradient-primary">
-            <Sparkles className="h-6 w-6 text-primary-foreground" />
+            {/* <Sparkles className="h-6 w-6 text-primary-foreground" /> */}
+            <img src="/favicon.svg" alt="AI Career Coach" className="h-12 w-12" />
           </div>
 
           <div>
@@ -99,6 +100,11 @@ export default function Signup() {
           </p>
         </div>
 
+        <p className="text-center text-sm text-muted-foreground">
+            <Link to="/" className="font-medium text-primary hover:underline">
+              Back to home
+            </Link>
+          </p> 
         <p className="text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link
