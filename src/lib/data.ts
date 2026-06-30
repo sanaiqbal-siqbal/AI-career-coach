@@ -316,23 +316,7 @@ export async function getResumeCount() {
   return count ?? 0;
 }
 
-// export async function getCareerPathsForUser() {
-//   const db = ensureClient();
-//   const userId = await getAuthenticatedUserId();
 
-//   const { data, error } = await db
-//     .from("career_paths")
-//     .select("paths")
-//     .eq("user_id", userId)
-//     .order("id", { ascending: false })
-//     .limit(1)
-//     .maybeSingle();
-
-//   if (error) throw error;
-
-//   const paths = data?.paths as CareerPath[] | null;
-//   return paths ?? [];
-// }
 export async function getCareerPathsForUser() {
   const db = ensureClient();
   const userId = await getAuthenticatedUserId();
@@ -366,19 +350,7 @@ export async function getCareerPathCount() {
   return paths.length;
 }
 
-// export async function saveInterviewConversation(conversation: InterviewMessage[]) {
-//   const db = ensureClient();
-//   const userId = await getAuthenticatedUserId();
-//   const latestResume = await getLatestResumeRecord();
 
-//   const { error } = await db.from("interviews").insert({
-//     user_id: userId,
-//     resume_id: latestResume?.id ?? null,
-//     conversation,
-//   });
-
-//   if (error) throw error;
-// }
 export async function saveInterviewConversation(
   conversation: InterviewMessage[],
   interviewId: string | null,
@@ -470,9 +442,48 @@ export async function getInterviewCount() {
   return count ?? 0;
 }
 
+
+/**
+ * Supabase's functions.invoke() wraps non-2xx Edge Function responses in a
+ * FunctionsHttpError. The actual JSON body — our { error, message } shape —
+ * is still readable from error.context. This safely extracts it across
+ * different supabase-js versions.
+ */
+async function extractEdgeFunctionErrorMessage(error: unknown): Promise<string | null> {
+  try {
+    const err = error as {
+      context?: { json?: () => Promise<unknown>; text?: () => Promise<string> };
+    };
+
+    if (err.context?.json) {
+      const body = await err.context.json();
+      if (body && typeof body === "object" && "message" in body) {
+        const msg = (body as { message: unknown }).message;
+        if (typeof msg === "string") return msg;
+      }
+    }
+
+    if (err.context?.text) {
+      const text = await err.context.text();
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed?.message && typeof parsed.message === "string") {
+          return parsed.message;
+        }
+      } catch {
+        // not JSON, ignore
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function analyzeResumeAndPersist(
   resumeId: string,
-  pdfBase64: string,   // ← was: resumeText: string
+  pdfBase64: string,
   targetRole: string,
 ) {
   const db = ensureClient();
@@ -481,20 +492,23 @@ export async function analyzeResumeAndPersist(
   const { data, error } = await db.functions.invoke(AI_FUNCTION_NAME, {
     body: {
       action: "analyze_resume",
-      payload: {
-        pdfBase64,     // ← was: resumeText
-        targetRole,
-      },
+      payload: { pdfBase64, targetRole },
     },
   });
 
   if (error) {
-    throw new Error(getFunctionErrorMessage(error, AI_FUNCTION_NAME));
+    const friendlyMessage = await extractEdgeFunctionErrorMessage(error);
+    throw new Error(friendlyMessage ?? getFunctionErrorMessage(error, AI_FUNCTION_NAME));
+  }
+
+  // Defensive check — function may have returned our error shape even on 2xx
+  if (data?.error) {
+    throw new Error(data.message || "Could not analyze this resume. Please try again.");
   }
 
   const result = data as AnalyzeResumeResult;
-  if (!result?.feedback) {
-    throw new Error("AI analysis function returned an invalid response.");
+  if (!result?.feedback || typeof result.feedback.atsScore !== "number") {
+    throw new Error("AI analysis returned an unexpected response. Please try uploading again.");
   }
 
   const { error: updateResumeError } = await db
@@ -552,15 +566,17 @@ export async function getInterviewReply(
   const { data, error } = await db.functions.invoke(AI_FUNCTION_NAME, {
     body: {
       action: "interview_reply",
-      payload: {
-        conversation,
-        targetRole,
-      },
+      payload: { conversation, targetRole },
     },
   });
 
   if (error) {
-    throw new Error(getFunctionErrorMessage(error, AI_FUNCTION_NAME));
+    const friendlyMessage = await extractEdgeFunctionErrorMessage(error);
+    throw new Error(friendlyMessage ?? getFunctionErrorMessage(error, AI_FUNCTION_NAME));
+  }
+
+  if (data?.error) {
+    throw new Error(data.message || "Could not get an interview reply. Please try again.");
   }
 
   const message = (data as { message?: string } | null)?.message;
