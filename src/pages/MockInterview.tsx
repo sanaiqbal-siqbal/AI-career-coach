@@ -208,7 +208,7 @@ export default function MockInterview() {
     return (
       <div className="space-y-8 animate-fade-in">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Mock Interview</h2>
+          <h2 className="text-2xl font-bold text-foreground">Mock Interviews (s)</h2>
           <p className="mt-1 text-sm text-muted-foreground">Practice with your AI interviewer after analyzing your resume.</p>
         </div>
         <EmptyState icon={MessageSquare} title="No interview sessions yet"
@@ -226,7 +226,7 @@ export default function MockInterview() {
           <div className="flex h-full flex-col">
             <div className="px-4 pt-3 pb-2 border-b border-border flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-foreground">Mock Interview</h2>
+                <h2 className="text-xl font-bold text-foreground">Mock Interview (s)</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">Past sessions</p>
               </div>
             </div>
