@@ -15,7 +15,7 @@ export function EmptyState({
   title,
   description,
   actionLabel = "Upload resume",
-  actionPath = "/upload",
+  actionPath = "/app/upload",
 }: EmptyStateProps) {
   const navigate = useNavigate();
 
