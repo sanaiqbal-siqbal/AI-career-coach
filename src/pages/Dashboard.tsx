@@ -31,6 +31,15 @@ const tools = [
     tag: "AI scored",
   },
   {
+    title: "Tailor Resume",
+    description: "Tailor your resume factually for any job and generate a matching cover letter instantly.",
+    icon: Sparkles,
+    path: "/app/tailor",
+    gradient: "from-amber-500 to-rose-500",
+    glow: "group-hover:shadow-[0_0_28px_rgba(244,63,94,0.35)]",
+    tag: "Optimize",
+  },
+  {
     title: "Career Paths",
     description: "See the 3 roles you're best matched for, with skill gap maps and growth roadmaps.",
     icon: Route,

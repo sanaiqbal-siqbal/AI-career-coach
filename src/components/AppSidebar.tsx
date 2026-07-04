@@ -5,6 +5,7 @@ import {
   FileSearch,
   Route,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -26,13 +27,14 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserProfile } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/supabase";
-
+ 
 const navItems = [
   { title: "Dashboard", url: "/app/dashboard", icon: LayoutDashboard },
   { title: "Upload Resume", url: "/app/upload", icon: Upload },
   { title: "Resume Analysis", url: "/app/analysis", icon: FileSearch },
   { title: "Career Paths", url: "/app/careers", icon: Route },
   { title: "Mock Interview", url: "/app/interview", icon: MessageSquare },
+  { title: "Tailor Resume", url: "/app/tailor", icon: Sparkles },
 ];
 
 export function AppSidebar() {

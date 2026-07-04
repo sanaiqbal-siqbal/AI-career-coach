@@ -586,3 +586,136 @@ export async function getInterviewReply(
 
   return message;
 }
+
+export type GeneratedDocument = {
+  id: string;
+  original_resume_id: string | null;
+  job_title: string;
+  generated_resume_path: string;
+  generated_cover_letter: string;
+  created_at: string;
+};
+
+export async function getAiUsage(featureName: string): Promise<number> {
+  const db = ensureClient();
+  const userId = await getAuthenticatedUserId();
+
+  const { data, error } = await db
+    .from("ai_usage")
+    .select("usage_count")
+    .eq("user_id", userId)
+    .eq("feature_name", featureName)
+    .maybeSingle();
+
+  if (error) throw formatDbError(error, "Fetching AI usage");
+  return data?.usage_count ?? 0;
+}
+
+export async function tailorResumeAndGenerateCoverLetter(payload: {
+  jobTitle: string;
+  jobDescription: string;
+  resumeId?: string;
+  pdfBase64?: string;
+  pdfText?: string;
+}) {
+  const db = ensureClient();
+
+  const { data, error } = await db.functions.invoke(AI_FUNCTION_NAME, {
+    body: {
+      action: "tailor_resume",
+      payload,
+    },
+  });
+
+  interface CreditLimitError extends Error {
+    code: "limit_reached";
+    limit: number;
+    price: string;
+  }
+
+  if (error) {
+    const friendlyMessage = await extractEdgeFunctionErrorMessage(error);
+    // Parse error context to see if it's a 403 credit wall trigger
+    let isCreditLimit = false;
+    let limit = 2;
+    let price = "4.99";
+    try {
+      const errContext = (error as { context?: { text?: () => Promise<string> } }).context;
+      if (errContext) {
+        const bodyText = await errContext.text();
+        const bodyObj = JSON.parse(bodyText);
+        if (bodyObj.error === "limit_reached") {
+          isCreditLimit = true;
+          limit = bodyObj.limit;
+          price = bodyObj.price;
+        }
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+
+    if (isCreditLimit) {
+      const customErr = new Error(`Limit reached: ${limit} credits used.`) as CreditLimitError;
+      customErr.code = "limit_reached";
+      customErr.limit = limit;
+      customErr.price = price;
+      throw customErr;
+    }
+
+    throw new Error(friendlyMessage ?? getFunctionErrorMessage(error, AI_FUNCTION_NAME));
+  }
+
+  if (data?.error) {
+    if (data.error === "limit_reached") {
+      const customErr = new Error(data.message) as CreditLimitError;
+      customErr.code = "limit_reached";
+      customErr.limit = data.limit;
+      customErr.price = data.price;
+      throw customErr;
+    }
+    throw new Error(data.message || "Failed to tailor resume.");
+  }
+
+  return data as {
+    tailoredResume: string;
+    coverLetter: string;
+    usageCount: number;
+    documentId: string;
+  };
+}
+
+export async function getGeneratedDocuments(): Promise<GeneratedDocument[]> {
+  const db = ensureClient();
+  const userId = await getAuthenticatedUserId();
+
+  const { data, error } = await db
+    .from("generated_documents")
+    .select("id, original_resume_id, job_title, generated_resume_path, generated_cover_letter, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw formatDbError(error, "Fetching generated documents");
+  return (data ?? []) as GeneratedDocument[];
+}
+
+export async function deleteGeneratedDocument(id: string, storagePath?: string): Promise<void> {
+  const db = ensureClient();
+  const userId = await getAuthenticatedUserId();
+
+  if (storagePath) {
+    try {
+      await db.storage.from("resumes").remove([storagePath]);
+    } catch (storageErr) {
+      console.error("Failed to remove tailored resume from storage:", storageErr);
+    }
+  }
+
+  const { error } = await db
+    .from("generated_documents")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw formatDbError(error, "Deleting generated document");
+}
+
