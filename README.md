@@ -1,4 +1,4 @@
-# 🚀 AI Career Coach
+# 🚀 AI Career Coach (All rights Reserved, allowed no reuse just view only of this project)
 
 > Your AI-powered career toolkit — analyze resumes, discover career paths, and ace interviews with real-time AI coaching.
 
