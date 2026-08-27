@@ -67,7 +67,7 @@ export default function MockInterview() {
   const [loadingList, setLoadingList] = useState(true);
   const [sending, setSending] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [targetRole, setTargetRole] = useState("Frontend Engineer");
+  const [targetRole, setTargetRole] = useState("");
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<ChatMessage[]>(messages);
@@ -141,7 +141,7 @@ export default function MockInterview() {
   const selectInterview = (record: InterviewRecord) => {
     setActiveInterviewId(record.id);
     setMessages(record.conversation ?? []);
-    setTargetRole(record.target_role ?? "Frontend Engineer");
+    setTargetRole(record.target_role ?? "");
     if (window.innerWidth < 1024) setMobileView("chat");
   };
   const handleDelete = async (interviewId: string) => {
@@ -170,7 +170,10 @@ export default function MockInterview() {
     setInput("");
     setSending(true);
     try {
-      const aiReply = await getInterviewReply(updatedWithUser.slice(-10), targetRole);
+      const aiReply = await getInterviewReply(
+        updatedWithUser.slice(-10),
+        targetRole.trim() || "Professional",
+      );
       const updatedConversation: ChatMessage[] = [
         ...updatedWithUser,
         { sender: "ai", message: aiReply, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
@@ -208,11 +211,11 @@ export default function MockInterview() {
     return (
       <div className="space-y-8 animate-fade-in">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Mock Interviews (s)</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Practice with your AI interviewer after analyzing your resume.</p>
+          <h2 className="text-2xl font-bold text-foreground">Interview Practice</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Practice for your next interview with AI feedback tailored to your role and resume.</p>
         </div>
         <EmptyState icon={MessageSquare} title="No interview sessions yet"
-          description="Upload your resume to generate a personalized mock interview starter." />
+          description="Upload your resume to start a personalized interview practice session." />
       </div>
     );
   }
@@ -226,7 +229,7 @@ export default function MockInterview() {
           <div className="flex h-full flex-col">
             <div className="px-4 pt-3 pb-2 border-b border-border flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-foreground">Mock Interview (s)</h2>
+                <h2 className="text-xl font-bold text-foreground">Interview Practice</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">Past sessions</p>
               </div>
             </div>
@@ -247,7 +250,7 @@ export default function MockInterview() {
                     className="min-w-0 flex-1 text-left"
                   >
                     <p className="truncate text-[12px] font-semibold text-foreground">
-                      {item.target_role || "Mock Interview"}
+                      {item.target_role || "Interview session"}
                     </p>
                     <p className="mt-0.5 text-[10px] text-muted-foreground">
                       {formatInterviewDate(item.created_at)}
@@ -403,7 +406,7 @@ export default function MockInterview() {
         {/* Sidebar (same as before, but only desktop) */}
         <div className="flex w-full flex-col gap-3 lg:w-64 lg:shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Mock Interview</h2>
+            <h2 className="text-xl font-bold text-foreground">Interview Practice</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">Past sessions</p>
           </div>
           <div className="flex-1 space-y-1.5 overflow-y-auto rounded-2xl border border-border bg-card p-2 shadow-card">
@@ -422,7 +425,7 @@ export default function MockInterview() {
                   className="min-w-0 flex-1 text-left"
                 >
                   <p className="truncate text-[11px] font-semibold text-foreground">
-                    {item.target_role || "Mock Interview"}
+                    {item.target_role || "Interview session"}
                   </p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
                     {formatInterviewDate(item.created_at)}

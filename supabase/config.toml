@@ -1,0 +1,12 @@
+# lemon-webhook MUST be deployed with JWT verification OFF (Lemon sends no auth header).
+[functions.lemon-webhook]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.quota-check]
+verify_jwt = true
+
+[functions.ai-career-coach]
+verify_jwt = true

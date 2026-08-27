@@ -6,6 +6,7 @@ import {
   Route,
   MessageSquare,
   Sparkles,
+  User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -33,8 +34,9 @@ const navItems = [
   { title: "Upload Resume", url: "/app/upload", icon: Upload },
   { title: "Resume Analysis", url: "/app/analysis", icon: FileSearch },
   { title: "Career Paths", url: "/app/careers", icon: Route },
-  { title: "Mock Interview", url: "/app/interview", icon: MessageSquare },
+  { title: "Interview Practice", url: "/app/interview", icon: MessageSquare },
   { title: "Tailor Resume", url: "/app/tailor", icon: Sparkles },
+  { title: "Profile", url: "/app/profile", icon: User },
 ];
 
 export function AppSidebar() {
@@ -130,12 +132,16 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border p-3">
         {!collapsed && (
-          <div className="mb-2 min-w-0 px-1">
+          <button
+            type="button"
+            onClick={() => navigate("/app/profile")}
+            className="mb-2 min-w-0 w-full rounded-lg px-1 py-1 text-left transition-colors hover:bg-sidebar-accent"
+          >
             <p className="truncate text-sm font-medium text-sidebar-foreground">
               {displayName || "User"}
             </p>
             <p className="truncate text-xs text-muted-foreground">{displayEmail}</p>
-          </div>
+          </button>
         )}
         <button
           onClick={() => void handleSignOut()}

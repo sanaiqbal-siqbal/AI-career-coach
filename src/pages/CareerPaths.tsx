@@ -73,8 +73,8 @@ export default function CareerPaths() {
           <h2 className="text-2xl font-bold text-foreground">Career Paths</h2>
           <p className="mt-1 text-muted-foreground">
             {loading ? "Generating recommendations…"
-              : paths.length > 0 ? "AI-matched roles based on your resume."
-              : "Analyze your resume to unlock personalized career paths."}
+              : paths.length > 0 ? "Discover where your experience can take you."
+              : "Analyze your resume to unlock personalized career directions."}
           </p>
         </div>
         {paths.length > 0 && (

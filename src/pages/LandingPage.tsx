@@ -163,13 +163,47 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Feature mockups (defined BEFORE features array)                   */
-/* ------------------------------------------------------------------ */
+const PROFESSIONS = [
+  "Software Engineer",
+  "Product Manager",
+  "UI/UX Designer",
+  "Marketing Manager",
+  "Data Analyst",
+  "Financial Analyst",
+  "Sales Executive",
+  "HR Manager",
+  "Project Manager",
+  "Business Consultant",
+  "Teacher",
+  "Healthcare Professional",
+];
+
+function ProfessionMarquee() {
+  const items = [...PROFESSIONS, ...PROFESSIONS];
+  return (
+    <div className="mt-10">
+      <p className="text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        Built for professionals across industries
+      </p>
+      <div className="lp-mask-fade-x mt-4 overflow-hidden">
+        <div className="lp-marquee flex w-max gap-3 py-1">
+          {items.map((role, i) => (
+            <span
+              key={`${role}-${i}`}
+              className="whitespace-nowrap rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-sm text-muted-foreground"
+            >
+              {role}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 function ResumeStudioMockup() {
   return (
     <Card className="lp-mockup overflow-hidden border-border/60 bg-card/60 p-5 backdrop-blur-xl">
-      <WindowChrome url="resume-studio / senior-pm.linear" />
+      <WindowChrome url="resume-studio / marketing-manager" />
       <div className="mt-4 grid grid-cols-5 gap-3">
         <div className="col-span-3 space-y-2">
           <div className="flex items-center justify-between">
@@ -177,9 +211,9 @@ function ResumeStudioMockup() {
             <Badge className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15">+18 pts</Badge>
           </div>
           {[
-            ["Led design system", "Shipped design system used by 40+ engineers, cutting build time 32%."],
-            ["Worked on onboarding", "Redesigned onboarding, lifting D7 retention from 21% → 38%."],
-            ["Helped with hiring", "Hired and mentored 4 designers; built rubric used company-wide."],
+            ["Managed campaigns", "Led multi-channel campaigns that increased qualified leads by 41% in 6 months."],
+            ["Worked on content", "Built content strategy that grew organic traffic from 12k to 48k monthly visitors."],
+            ["Helped with reporting", "Introduced weekly KPI dashboards used by sales and leadership teams."],
           ].map(([before, after]) => (
             <div key={before} className="rounded-lg border border-border/50 bg-background/40 p-3 text-xs">
               <p className="text-muted-foreground line-through">{before}</p>
@@ -191,7 +225,7 @@ function ResumeStudioMockup() {
           <div className="rounded-lg border border-border/50 bg-background/40 p-3">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Keyword match</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {[["roadmap",true],["B2B SaaS",true],["activation",true],["SQL",false],["growth loops",true],["A/B testing",false]].map(([k,hit]) => (
+              {[["go-to-market",true],["demand gen",true],["CRM",true],["analytics",false],["brand strategy",true],["A/B testing",true]].map(([k,hit]) => (
                 <span key={k as string} className={`rounded-md border px-1.5 py-0.5 text-[10px] ${hit ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-rose-500/30 bg-rose-500/10 text-rose-300"}`}>{k}</span>
               ))}
             </div>
@@ -199,7 +233,7 @@ function ResumeStudioMockup() {
           <div className="rounded-lg border border-border/50 bg-background/40 p-3">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Missing skills</p>
             <ul className="mt-2 space-y-1.5 text-[11px]">
-              {[["SQL fundamentals","2h course"],["Experimentation","3 case studies"]].map(([s,t]) => (
+              {[["Marketing analytics","2h course"],["Campaign attribution","3 case studies"]].map(([s,t]) => (
                 <li key={s} className="flex items-center justify-between"><span>{s}</span><span className="text-muted-foreground">{t}</span></li>
               ))}
             </ul>
@@ -216,9 +250,9 @@ function CareerMatchMockup() {
       <WindowChrome url="match / for-you" />
       <div className="mt-4 space-y-3">
         {[
-          { role:"Staff Product Designer", meta:"Linear · Remote", score:98, salary:"$210–245k", why:"Strong systems + B2B SaaS background", gaps:["Mentorship at scale"] },
-          { role:"Design Engineer", meta:"Vercel · Remote", score:94, salary:"$190–225k", why:"Ships in code, design system ownership", gaps:["Edge runtime exposure"] },
-          { role:"Senior Designer, Growth", meta:"Notion · NYC", score:89, salary:"$175–205k", why:"Onboarding & activation experience", gaps:["Experimentation rigor"] },
+          { role:"Growth Marketing Manager", meta:"Consumer brand · Hybrid", score:96, salary:"Competitive", why:"Strong campaign ownership + measurable pipeline impact", gaps:["Enterprise B2B experience"] },
+          { role:"Product Marketing Manager", meta:"SaaS company · Remote", score:92, salary:"Competitive", why:"Launch messaging and cross-functional go-to-market", gaps:["Pricing strategy depth"] },
+          { role:"Brand Strategist", meta:"Agency · NYC", score:88, salary:"Competitive", why:"Content, positioning, and audience development", gaps:["Global campaign scale"] },
         ].map(m => (
           <div key={m.role} className="rounded-lg border border-border/50 bg-background/40 p-3 transition hover:border-[#8b5cf6]/40">
             <div className="flex items-start justify-between">
@@ -302,7 +336,7 @@ function RoadmapMockup() {
             <p className="text-xs text-muted-foreground">This week's plan</p>
             <Badge className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15">4 / 5 done</Badge>
           </div>
-          {[["Mon","Tailor resume → Linear PM role",true],["Tue","Mock behavioral · 30 min",true],["Wed","Apply to 5 top matches",true],["Thu","System design rep · Stripe",true],["Fri","Review feedback + iterate",false]].map(([d,t,done]) => (
+          {[["Mon","Tailor resume → target role",true],["Tue","Mock behavioral · 30 min",true],["Wed","Apply to 5 top matches",true],["Thu","Role-specific interview prep",true],["Fri","Review feedback + iterate",false]].map(([d,t,done]) => (
             <div key={d as string} className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/40 px-3 py-2 text-xs transition hover:border-[#8b5cf6]/40">
               <span className="w-9 text-[10px] uppercase text-muted-foreground">{d as string}</span>
               <span className="flex-1">{t as string}</span>
@@ -382,7 +416,7 @@ function HeroMockup() {
               <Badge className="bg-[#6366f1]/15 text-[10px] text-[#a5b4fc] hover:bg-[#6366f1]/15">AI ranked</Badge>
             </div>
             <div className="mt-3 space-y-2">
-              {[["Senior Product Designer","Linear · Remote","98%"],["Staff Frontend Engineer","Vercel · Remote","94%"],["Design Engineer","Stripe · NYC","91%"],["Product Engineer","Arc · SF","88%"]].map(([role,co,m]) => (
+              {[["Marketing Manager","Regional brand · Hybrid","96%"],["Product Manager","Enterprise SaaS · Remote","92%"],["Financial Analyst","Corporate finance · NYC","89%"],["HR Business Partner","People ops · Hybrid","86%"]].map(([role,co,m]) => (
                 <div key={role} className="flex items-center justify-between rounded-lg border border-border/50 bg-card/40 px-3 py-2 transition hover:border-[#8b5cf6]/40">
                   <div><p className="text-sm font-medium">{role}</p><p className="text-[11px] text-muted-foreground">{co}</p></div>
                   <span className="text-xs font-semibold text-[#a5b4fc]">{m}</span>
@@ -414,7 +448,7 @@ function HeroMockup() {
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#6366f1] to-[#8b5cf6]">
             <Mic className="h-3.5 w-3.5 text-white" />
           </div>
-          <p className="text-xs font-medium">Mock Interview</p>
+          <p className="text-xs font-medium">Interview Practice</p>
           <span className="ml-auto lp-pulse-dot h-1.5 w-1.5 rounded-full bg-emerald-400" />
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
@@ -434,7 +468,7 @@ function HeroMockup() {
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Offer signed</p>
-            <p className="text-xs font-semibold">$12k base · Linear</p>
+            <p className="text-xs font-semibold">Offer signed · Marketing Manager</p>
           </div>
         </div>
       </Card>
@@ -448,14 +482,14 @@ function HeroMockup() {
 const problems = [
   { icon:FileText, title:"Resumes that get filtered out", body:"75% of resumes never reach a human. Generic templates and missing keywords kill your chances before page one.", stat:"75%", statLabel:"auto-rejected by ATS" },
   { icon:Target, title:"Spraying applications, hearing silence", body:"Hundreds of applications, dozens of tabs, zero feedback. You can't tell what's working — or why it isn't.", stat:"2%", statLabel:"average reply rate" },
-  { icon:MessageSquare, title:"Interviews you couldn't rehearse for", body:"Behavioral, system design, take-home — no honest feedback loop, just a friend who says 'sounds great'.", stat:"1 in 6", statLabel:"onsites convert" },
+  { icon:MessageSquare, title:"Interviews you couldn't rehearse for", body:"Behavioral, role-specific, situational — no honest feedback loop, just a friend who says 'sounds great'.", stat:"1 in 6", statLabel:"final rounds convert" },
   { icon:TrendingUp, title:"No idea where your career is headed", body:"Should you specialize? Switch domains? Negotiate? Generic advice from the internet doesn't know you.", stat:"0", statLabel:"personalized roadmap" },
 ];
 
 const features = [
-  { tag:"Resume Studio", title:"Resumes optimized for the exact job — not a template.", body:"Upload your PDF and get an instant ATS score, keyword breakdown, and a prioritized list of what to fix — backed by real AI analysis of your actual resume.", bullets:["ATS score with explainable breakdown","Quantified impact suggestions","Strength & weakness analysis"], mockup:<ResumeStudioMockup /> },
-  { tag:"Career Match", title:"Discover the 3 roles you're best matched for.", body:"AI analyzes your resume and target role to show personalized career path recommendations with match percentages and skill gap analysis.", bullets:["3 AI-matched career paths","Match percentage visualization","Skill gap analysis per role"], mockup:<CareerMatchMockup /> },
-  { tag:"Mock Interviews", title:"Realistic interview practice with honest feedback.", body:"Your AI interviewer asks questions tailored to your resume and target role. Conversations are saved — pick up right where you left off.", bullets:["Questions based on your real resume","Persistent conversation history","Multiple sessions, full history saved"], mockup:<InterviewCoachMockup /> },
+  { tag:"Resume Analysis", title:"Understand how your experience positions you for your next role.", body:"Upload your PDF and get an instant ATS score, keyword breakdown, and a prioritized list of improvements — backed by real AI analysis of your actual resume.", bullets:["ATS compatibility with explainable breakdown","Achievement and impact suggestions","Strength & improvement analysis"], mockup:<ResumeStudioMockup /> },
+  { tag:"Career Paths", title:"Discover where your experience can take you.", body:"AI analyzes your resume and goals to show personalized career path recommendations with match percentages and skill gap analysis.", bullets:["3 AI-matched career directions","Match percentage visualization","Skill gap analysis per path"], mockup:<CareerMatchMockup /> },
+  { tag:"Interview Practice", title:"Practice realistic interviews tailored to the role you're pursuing.", body:"Your AI interviewer asks questions based on your resume and target role — behavioral, role-specific, and technical when relevant. Conversations are saved so you can pick up where you left off.", bullets:["Questions based on your real background","Persistent conversation history","Multiple sessions with full history"], mockup:<InterviewCoachMockup /> },
   { tag:"Career Roadmap", title:"A weekly game plan that adapts as you progress.", body:"Milestones, weekly goals, and recommended actions calibrated to your timeline and target role.", bullets:["Weekly goals + progress tracker","Milestones tied to real outcomes","Recommended actions, ranked by impact"], mockup:<RoadmapMockup /> },
 ];
 
@@ -471,7 +505,7 @@ const compare = [
 const steps = [
   { n:"01", title:"Upload your resume", body:"Drop your PDF and tell us your target role. Takes 10 seconds. Works on every device including mobile." },
   { n:"02", title:"Get instant AI analysis", body:"Receive your ATS score, strengths, weaknesses, and personalized career path recommendations in under 15 seconds." },
-  { n:"03", title:"Practice and improve", body:"Run mock interview sessions tailored to your resume, track your progress, and apply with confidence." },
+  { n:"03", title:"Practice and improve", body:"Run interview practice sessions tailored to your role and resume, track your progress, and apply with confidence." },
 ];
 
 const stats = [
@@ -487,7 +521,7 @@ const faqs = [
   { q:"What file formats are supported?", a:"PDF resumes up to 5MB. Make sure it's a text-based PDF (not a scanned image) for the most accurate analysis. PDFs from Word, Google Docs, or CV builders work perfectly." },
   { q:"How accurate is the ATS score?", a:"Our AI analyzes your resume the same way real ATS systems do — checking keyword density, formatting, structure, and role alignment to give a realistic compatibility score with specific improvement points." },
   { q:"Can I practice multiple interview sessions?", a:"Yes. Every session is saved separately so you can review your conversation history and track improvement over time. Conversations auto-save even if you close the tab." },
-  { q:"Is it free to use?", a:"Getting started is completely free — upload your resume and get your full AI analysis, career paths, and a personalized mock interview session at no cost." },
+  { q:"Is it free to use?", a:"Getting started is completely free — upload your resume and get your full AI analysis, career paths, and a personalized interview practice session at no cost." },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -551,13 +585,13 @@ export default function LandingPage() {
         <div className="grid items-center gap-14 lg:grid-cols-2">
           <div className="lp-fade-up">
             <Badge variant="secondary" className="mb-5 rounded-full border border-border/60 bg-card/60 backdrop-blur">
-              <Sparkles className="mr-1.5 h-3 w-3 text-[#a5b4fc]" /> AI-powered career toolkit
+              <Sparkles className="mr-1.5 h-3 w-3 text-[#a5b4fc]" /> AI-powered career platform
             </Badge>
             <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Land the job you{" "}
+              Your Career,{" "}
               <span className="relative inline-block">
                 <span className="lp-animated-gradient bg-gradient-to-r from-[#a5b4fc] via-[#c4b5fd] to-[#f0abfc] bg-clip-text text-transparent">
-                  actually want.
+                  Smarter.
                 </span>
                 <svg aria-hidden viewBox="0 0 200 12" className="absolute -bottom-2 left-0 h-3 w-full text-[#8b5cf6]" preserveAspectRatio="none">
                   <path d="M2 8 Q 50 2, 100 6 T 198 5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -565,7 +599,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="mt-5 max-w-xl text-lg text-muted-foreground">
-              AI Career Coach analyzes your resume, shows your best career paths, and runs realistic mock interviews — all tailored to your actual experience. Not generic advice.
+              Understand your strengths, improve your resume, discover the right career paths, and practice for interviews with an AI career coach built around you — not generic advice.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button size="lg" className="lp-glow-btn lp-animated-gradient bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white" asChild>
@@ -586,17 +620,7 @@ export default function LandingPage() {
           <HeroMockup />
         </div>
 
-        {/* Marquee */}
-        <div className="mt-24">
-          <p className="text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">Coached job seekers placed at</p>
-          <div className="lp-mask-fade-x mt-6 overflow-hidden">
-            <div className="lp-marquee flex w-max gap-12 text-lg font-semibold text-muted-foreground/70">
-              {["Linear","Vercel","Stripe","Notion","Figma","Arc","Ramp","Loom","Raycast","Anthropic","Perplexity","Airtable","Linear","Vercel","Stripe","Notion","Figma","Arc","Ramp","Loom","Raycast","Anthropic","Perplexity","Airtable"].map((l,i) => (
-                <span key={`${l}-${i}`} className="whitespace-nowrap opacity-80 transition hover:opacity-100">{l}</span>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ProfessionMarquee />
       </section>
 
       {/* ── Problem ── */}
@@ -644,10 +668,10 @@ export default function LandingPage() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>
               <Eyebrow>The solution</Eyebrow>
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">One toolkit. Built for the modern job search.</h2>
-              <p className="mt-4 text-muted-foreground">Resume analysis, career path matching, and mock interviews — all in one place, all personalized to your actual resume.</p>
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">One platform. Personalized to your career.</h2>
+              <p className="mt-4 text-muted-foreground">Resume analysis, career path discovery, and interview practice — all in one place, all adapted to your background and target role.</p>
               <ul className="mt-6 space-y-3 text-sm">
-                {["Resume analysis that beats real ATS systems","Career path matching with skill gap breakdown","Mock interviews tailored to your resume","Persistent history across every session"].map(s => (
+                {["Resume intelligence that reflects how hiring systems evaluate candidates","Career path matching with skill gap breakdown","Interview practice tailored to your role and industry","Persistent history across every session"].map(s => (
                   <li key={s} className="flex items-start gap-2"><Check className="mt-0.5 h-4 w-4 text-emerald-400" />{s}</li>
                 ))}
               </ul>
@@ -824,7 +848,7 @@ export default function LandingPage() {
           <div className="relative mx-auto max-w-2xl text-center">
             <Zap className="mx-auto h-8 w-8" />
             <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">Your next offer is one upload away.</h2>
-            <p className="mt-4 text-white/80">Start free. Get your ATS score, career paths, and first mock interview in under 5 minutes.</p>
+            <p className="mt-4 text-white/80">Start free. Get your ATS score, career paths, and first interview practice session in under 5 minutes.</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Button size="lg" className="lp-glow-btn bg-white text-[#4f46e5] hover:bg-white/90 font-semibold" asChild>
                 <Link to="/signup">Start free <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -881,7 +905,7 @@ export default function LandingPage() {
         <div className="border-t border-border/40">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 py-6 text-xs text-muted-foreground sm:flex-row">
             <p>© {new Date().getFullYear()} AI Career Coach. All rights reserved.</p>
-            <p>Built for job seekers who refuse to settle.</p>
+            <p>Built for professionals who want clarity in their next career move.</p>
           </div>
         </div>
       </footer>

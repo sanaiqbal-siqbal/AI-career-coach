@@ -10,6 +10,8 @@ import { AppLayout } from "@/components/AppLayout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import LandingPage from "./pages/LandingPage";
+import BillingSuccess from "./pages/billing/success";
+import BillingCancel from "./pages/billing/cancel";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,8 @@ const App = () => (
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/billing/success" element={<BillingSuccess />} />
+              <Route path="/billing/cancel" element={<BillingCancel />} />
 
               <Route
                 path="/app/*"

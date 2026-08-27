@@ -41,7 +41,7 @@ const tools = [
   },
   {
     title: "Career Paths",
-    description: "See the 3 roles you're best matched for, with skill gap maps and growth roadmaps.",
+    description: "See where your experience can take you, with skill gap maps and growth roadmaps.",
     icon: Route,
     path: "/app/careers",
     gradient: "from-amber-500 to-orange-500",
@@ -49,8 +49,8 @@ const tools = [
     tag: "Personalized",
   },
   {
-    title: "Mock Interview",
-    description: "Practice live with your AI interviewer — questions tailored to your actual resume.",
+    title: "Interview Practice",
+    description: "Practice live with your AI interviewer — questions tailored to your role and resume.",
     icon: MessageSquare,
     path: "/app/interview",
     gradient: "from-rose-500 to-pink-600",
@@ -153,7 +153,7 @@ export default function Dashboard() {
             Welcome back, <span className="text-primary">{userName}</span>
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Your AI-powered career toolkit. Everything you need to land your next role.
+            Your personalized career platform. Resume insights, path discovery, and interview prep in one place.
           </p>
         </div>
         <div

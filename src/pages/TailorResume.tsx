@@ -4,12 +4,13 @@ import {
   CheckCircle2, Trash2, Download, Briefcase, 
   ArrowLeft, Lock, ArrowRight, RefreshCw 
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   getResumesForUser, 
-  getAiUsage,
+  getTailoringCredits,
+  fetchResumeContentForTailoring,
   tailorResumeAndGenerateCoverLetter,
   getGeneratedDocuments,
   deleteGeneratedDocument,
@@ -18,6 +19,9 @@ import {
   type GeneratedDocument
 } from "@/lib/data";
 import { extractTextFromPdf } from "@/lib/pdf";
+import { supabase } from "@/lib/supabase";
+import { SUBSCRIPTION_ENABLED } from "@/lib/pricing";
+import { useProPlanPrice } from "@/hooks/use-pro-plan-price";
 
 type Step = "input" | "resume" | "generating" | "results" | "limit_wall";
 
@@ -73,6 +77,7 @@ function markdownToHtml(md: string): string {
 export default function TailorResume() {
   const { loading: authLoading, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
 
   const [step, setStep] = useState<Step>("input");
@@ -87,11 +92,12 @@ export default function TailorResume() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Credits & Pricing states
+  // Credits & Pricing states (subscription UI paused — see SUBSCRIPTION_ENABLED)
   const [creditsUsed, setCreditsUsed] = useState(0);
-  const [creditLimit, setCreditLimit] = useState(2);
-  const [featurePrice, setFeaturePrice] = useState("4.99");
+  const [creditLimit, setCreditLimit] = useState(9999);
+  const [isPro, setIsPro] = useState(true);
   const [checkingCredits, setCheckingCredits] = useState(true);
+  const { priceLabel, priceDetail, pkrPrice, loading: priceLoading } = useProPlanPrice();
 
   // Generated document states
   const [documentId, setDocumentId] = useState("");
@@ -112,10 +118,22 @@ export default function TailorResume() {
     if (!user) return;
     try {
       setCheckingCredits(true);
-      const usage = await getAiUsage("resume_tailoring");
-      setCreditsUsed(usage);
-      
-      // Load generated documents history
+
+      if (SUBSCRIPTION_ENABLED) {
+        const credits = await getTailoringCredits();
+        setCreditsUsed(credits.used);
+        setCreditLimit(credits.limit);
+        setIsPro(credits.isPro);
+
+        if (!credits.isPro && credits.used >= credits.limit) {
+          setStep("limit_wall");
+        }
+      } else {
+        setCreditsUsed(0);
+        setCreditLimit(9999);
+        setIsPro(true);
+      }
+
       setLoadingHistory(true);
       const docs = await getGeneratedDocuments();
       setHistory(docs);
@@ -126,6 +144,20 @@ export default function TailorResume() {
       setLoadingHistory(false);
     }
   }, [user]);
+
+  /*
+  useEffect(() => {
+    if (searchParams.get("upgraded") === "1") {
+      toast({
+        title: "Upgrade active",
+        description: "Your resume tailoring plan is now unlocked.",
+      });
+      searchParams.delete("upgraded");
+      setSearchParams(searchParams, { replace: true });
+      void loadCreditsAndHistory().then(() => setStep("input"));
+    }
+  }, [searchParams, setSearchParams, toast, loadCreditsAndHistory]);
+  */
 
   useEffect(() => {
     if (authLoading) return;
@@ -159,8 +191,7 @@ export default function TailorResume() {
       return;
     }
     
-    // Check limit before choosing resume
-    if (creditsUsed >= creditLimit) {
+    if (SUBSCRIPTION_ENABLED && !isPro && creditsUsed >= creditLimit) {
       setStep("limit_wall");
       return;
     }
@@ -187,6 +218,11 @@ export default function TailorResume() {
       return;
     }
 
+    if (selectedResumeId === "NEW_UPLOAD" && !uploadFile) {
+      toast({ title: "Resume Required", description: "Please select a PDF file to upload." });
+      return;
+    }
+
     setStep("generating");
     setProgressMsg("Extracting resume content...");
 
@@ -196,28 +232,44 @@ export default function TailorResume() {
       let finalResumeId = selectedResumeId;
 
       if (selectedResumeId === "NEW_UPLOAD" && uploadFile) {
-        // Extract text client-side first (Optimized token bandwidth!)
-        try {
-          setProgressMsg("Parsing PDF text locally...");
-          pdfText = await extractTextFromPdf(uploadFile);
-        } catch (err) {
-          console.warn("Client side PDF parsing failed, uploading raw base64 instead.", err);
+        setProgressMsg("Parsing PDF text locally...");
+        pdfText = await extractTextFromPdf(uploadFile);
+        if (!pdfText.trim()) {
+          throw new Error(
+            "Could not extract text from this PDF. Use a text-based PDF, not a scanned image.",
+          );
         }
 
-        setProgressMsg("Uploading new resume...");
-        // Convert to base64 for backup
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve) => {
+        setProgressMsg("Reading PDF for upload...");
+        pdfBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
           reader.onload = () => {
             const base64 = (reader.result as string).split(",")[1];
             resolve(base64 || "");
           };
+          reader.onerror = () => reject(new Error("Could not read the PDF file."));
           reader.readAsDataURL(uploadFile);
         });
-        pdfBase64 = await base64Promise;
 
+        setProgressMsg("Uploading new resume...");
         const savedRow = await uploadResumeFile(uploadFile, jobTitle);
         finalResumeId = savedRow.id;
+      } else if (selectedResumeId !== "NEW_UPLOAD") {
+        setProgressMsg("Loading selected resume...");
+        const content = await fetchResumeContentForTailoring(selectedResumeId);
+        pdfText = content.pdfText;
+        pdfBase64 = content.pdfBase64;
+        finalResumeId = selectedResumeId;
+      }
+
+      if (finalResumeId === "NEW_UPLOAD") {
+        throw new Error("Resume upload did not complete. Please select your PDF again.");
+      }
+
+      if (!pdfText.trim() && !pdfBase64.trim()) {
+        throw new Error(
+          "Could not read resume content. Upload a text-based PDF or choose another file.",
+        );
       }
 
       setProgressMsg("Analyzing job details...");
@@ -229,9 +281,9 @@ export default function TailorResume() {
       const result = await tailorResumeAndGenerateCoverLetter({
         jobTitle,
         jobDescription,
-        resumeId: finalResumeId === "NEW_UPLOAD" ? undefined : finalResumeId,
-        pdfBase64: pdfBase64 || undefined,
-        pdfText: pdfText || undefined
+        resumeId: finalResumeId,
+        pdfText: pdfText.trim() || undefined,
+        pdfBase64: pdfBase64.trim() || undefined,
       });
 
       setTailoredResume(result.tailoredResume);
@@ -245,10 +297,9 @@ export default function TailorResume() {
       void loadCreditsAndHistory();
     } catch (error: unknown) {
       console.error(error);
-      const err = error as { code?: string; limit?: number; price?: string; message?: string };
-      if (err.code === "limit_reached") {
+      const err = error as { code?: string; limit?: number; message?: string };
+      if (SUBSCRIPTION_ENABLED && err.code === "limit_reached") {
         setCreditLimit(err.limit ?? 2);
-        setFeaturePrice(err.price ?? "4.99");
         setStep("limit_wall");
       } else {
         toast({
@@ -353,48 +404,62 @@ export default function TailorResume() {
     printWindow.document.close();
   };
 
-  const handleSimulatedUpgrade = async () => {
+  /* Subscription checkout — re-enable when SUBSCRIPTION_ENABLED is true
+  const handleStartCheckout = async () => {
     setUnlocking(true);
+  
     try {
-      // Simulate checkout API latency
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update DB to reset usage count via RPC or directly update.
-      // Since it's a simulated flow, we just update the usage count back to 0 in the db!
-      const db = await getResumesForUser(); // verifies auth
-      const { error } = await getAiUsage("resume_tailoring")
-        .then(async () => {
-          // Reset count to 0 for demo/simulated purchase unlock
-          const { error: updateErr } = await getAiUsage("resume_tailoring").then(async () => {
-            // Upsert usage count back to 0
-            const supabase = (await import("@/lib/supabase")).supabase!;
-            const { data: { user } } = await supabase.auth.getUser();
-            return supabase.from("ai_usage").upsert({
-              user_id: user!.id,
-              feature_name: "resume_tailoring",
-              usage_count: 0,
-              last_used: new Date().toISOString()
-            }, { onConflict: "user_id,feature_name" });
-          });
-          return { error: updateErr };
-        });
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+  
+      if (sessionError) throw sessionError;
+      if (!session?.access_token) throw new Error("You must be signed in.");
 
-      if (error) throw error;
-      
-      setCreditsUsed(0);
+      const origin = window.location.origin;
+  
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            variantId: import.meta.env.VITE_LEMON_VARIANT_ID,
+            planName: "pro-monthly",
+            successUrl: `${origin}/billing/success`,
+            cancelUrl: `${origin}/billing/cancel`,
+          }),
+        }
+      );
+  
+      const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data?.message || "Could not start checkout.");
+      }
+  
+      if (!data.checkoutUrl) {
+        throw new Error("Missing checkout URL.");
+      }
+  
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
       toast({
-        title: "Purchase Successful",
-        description: "Unlimited resume tailoring has been unlocked!",
-      });
-      setStep("input");
-    } catch (err: unknown) {
-      toast({
-        title: "Unlock failed",
-        description: err instanceof Error ? err.message : String(err),
+        title: "Checkout failed",
+        description: err instanceof Error ? err.message : "Please try again.",
       });
     } finally {
       setUnlocking(false);
     }
+  };
+  */
+
+  const handleStartCheckout = async () => {
+    // Subscription checkout paused — uncomment block above when SUBSCRIPTION_ENABLED is true.
   };
 
   const handleDeleteHistory = async (id: string, storagePath: string) => {
@@ -462,10 +527,12 @@ export default function TailorResume() {
           </p>
         </div>
         
+        {SUBSCRIPTION_ENABLED && (
         <div className="flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2 shadow-sm">
           <span className="text-xs font-semibold text-muted-foreground uppercase">Credits Used:</span>
           <span className="text-sm font-bold text-foreground">{creditsUsed} / {creditLimit}</span>
         </div>
+        )}
       </div>
 
       {/* ── Step 1: Input Job Details ────────────────────────────────────────── */}
@@ -490,7 +557,7 @@ export default function TailorResume() {
                 id="job-title"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
-                placeholder="e.g. Senior Full-Stack Engineer"
+                placeholder="e.g. Marketing Manager, Operations Lead, Product Designer"
                 className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
               />
             </div>
@@ -781,63 +848,109 @@ export default function TailorResume() {
         </div>
       )}
 
-      {/* ── Step 5: Upgrade Limit Wall ───────────────────────────────────────── */}
-      {step === "limit_wall" && (
-        <div className="mx-auto max-w-md bg-card border-2 border-primary/20 rounded-3xl p-8 text-center space-y-6 shadow-glow relative overflow-hidden">
-          <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-            Limit Reached
-          </div>
-          
-          <div className="p-4 bg-primary/10 rounded-full text-primary w-fit mx-auto animate-bounce">
-            <Lock className="h-10 w-10" />
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-2xl font-black text-foreground tracking-tight">Unlock Resume Tailoring</h3>
-            <p className="text-sm text-muted-foreground">
-              Your free AI resume tailoring credits ({creditLimit} uses) have been fully used.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-muted/50 border border-border space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Resume Tailoring:</span>
-              <span className="font-semibold text-foreground">Unlimited</span>
+      {/* Subscription paywall — re-enable when SUBSCRIPTION_ENABLED is true */}
+      {SUBSCRIPTION_ENABLED && step === "limit_wall" && (
+        <div className="space-y-6">
+          <div className="mx-auto max-w-md bg-card border-2 border-primary/20 rounded-3xl p-8 text-center space-y-6 shadow-glow relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+              Free plan limit
             </div>
-            <div className="flex justify-between text-sm border-b border-border pb-2.5">
-              <span className="text-muted-foreground">Cover Letter Generation:</span>
-              <span className="font-semibold text-foreground">Unlimited</span>
+
+            <div className="p-4 bg-primary/10 rounded-full text-primary w-fit mx-auto">
+              <Lock className="h-10 w-10" />
             </div>
-            <div className="flex justify-between text-base font-bold pt-1">
-              <span className="text-foreground">Price:</span>
-              <span className="text-primary">${featurePrice} / lifetime</span>
+
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-foreground tracking-tight">Upgrade Your Plan</h3>
+              <p className="text-sm text-muted-foreground">
+                You&apos;ve used all {creditLimit} free resume tailoring credits. Upgrade to Pro to keep tailoring resumes and generating cover letters.
+              </p>
             </div>
+
+            <div className="p-4 rounded-2xl bg-muted/50 border border-border space-y-3 text-left">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Resume tailoring</span>
+                <span className="font-semibold text-foreground">25 / day</span>
+              </div>
+              <div className="flex justify-between text-sm border-b border-border pb-2.5">
+                <span className="text-muted-foreground">Cover letter generation</span>
+                <span className="font-semibold text-foreground">25 / day</span>
+              </div>
+              <div className="flex justify-between text-base font-bold pt-1">
+                <span className="text-foreground">Pro plan</span>
+                <span className="text-primary">
+                  {priceLoading ? "Loading price..." : priceLabel}
+                </span>
+              </div>
+              {!priceLoading && (
+                <p className="text-xs text-muted-foreground">
+                  Billed at Rs. {pkrPrice.toLocaleString()} on checkout · USD estimate based on today&apos;s rate
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={() => void handleStartCheckout()}
+              disabled={unlocking}
+              className="w-full flex items-center justify-center gap-2 rounded-xl gradient-primary text-primary-foreground py-3.5 text-sm font-bold shadow-card hover:opacity-95 disabled:opacity-50 transition-all"
+            >
+              {unlocking ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Redirecting to secure checkout...
+                </>
+              ) : (
+                <>
+                  Upgrade Your Plan
+                  <Sparkles className="h-4 w-4" />
+                </>
+              )}
+            </button>
+
+            <Link
+              to="/app/profile"
+              className="block text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
+            >
+              View plan details on profile
+            </Link>
           </div>
 
-          <button
-            onClick={() => void handleSimulatedUpgrade()}
-            disabled={unlocking}
-            className="w-full flex items-center justify-center gap-2 rounded-xl gradient-primary text-primary-foreground py-3.5 text-sm font-bold shadow-card hover:opacity-95 disabled:opacity-50 transition-all"
-          >
-            {unlocking ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Processing simulated checkout...
-              </>
-            ) : (
-              <>
-                Unlock Unlimited Access
-                <Sparkles className="h-4 w-4" />
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={() => setStep("input")}
-            className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
-          >
-            Go Back
-          </button>
+          {history.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-card space-y-4">
+              <h4 className="text-sm font-bold text-foreground uppercase tracking-wider">
+                Your tailored documents
+              </h4>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {history.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-4 rounded-xl border border-border bg-background shadow-sm hover:border-primary/30 transition-all"
+                  >
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => viewHistoryItem(doc)}
+                    >
+                      <p className="text-sm font-semibold text-foreground truncate">{doc.job_title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(doc.created_at).toLocaleDateString([], {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => void handleDeleteHistory(doc.id, doc.generated_resume_path)}
+                      className="text-muted-foreground hover:text-destructive p-1 rounded-lg hover:bg-muted transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
