@@ -7,6 +7,8 @@ import UploadResume from "@/pages/UploadResume";
 import ResumeAnalysis from "@/pages/ResumeAnalysis";
 import CareerPaths from "@/pages/CareerPaths";
 import MockInterview from "@/pages/MockInterview";
+import TailorResume from "@/pages/TailorResume";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
 export function AppLayout() {
@@ -24,6 +26,8 @@ export function AppLayout() {
               <Route path="analysis" element={<ResumeAnalysis />} />
               <Route path="careers" element={<CareerPaths />} />
               <Route path="interview" element={<MockInterview />} />
+              <Route path="tailor" element={<TailorResume />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

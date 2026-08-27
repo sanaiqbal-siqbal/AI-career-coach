@@ -57,8 +57,14 @@ export function AppHeader() {
       </div>
       <div className="flex items-center gap-3">
         <div className="hidden text-right md:block">
-          <p className="text-sm font-medium text-foreground">{displayName || "User"}</p>
-          <p className="text-xs text-muted-foreground">{displayEmail}</p>
+          <button
+            type="button"
+            onClick={() => navigate("/app/profile")}
+            className="rounded-lg px-1 py-0.5 text-right transition-colors hover:bg-muted"
+          >
+            <p className="text-sm font-medium text-foreground">{displayName || "User"}</p>
+            <p className="text-xs text-muted-foreground">{displayEmail}</p>
+          </button>
         </div>
         <button
           onClick={toggle}
